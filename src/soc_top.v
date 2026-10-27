@@ -6,6 +6,15 @@
 // VGA không có thanh ghi (đọc Display RAM của display_ctrl). beeper chỉ ghi → không góp vào bus_rdata.
 // Bộ giải mã bus: mọi khối nhận chung bus_addr/bus_we/bus_re (CPU đã lọc vùng 0xFFFF_FFxx) và tự trả 0 khi
 // địa chỉ không phải của mình (mmio-map §2) → bus_rdata = OR các khối.
+//
+// ĐỌC NHANH: file này là "bảng mạch chủ": không tự tính gì, chỉ nối dây giữa CPU và mọi ngoại vi.
+// Cách CPU nói chuyện với ngoại vi: CPU đọc/ghi một địa chỉ đặc biệt (vùng cuối 4 GB, địa chỉ "âm") bằng lệnh lw/sw
+// như đọc/ghi bộ nhớ. Địa chỉ đó đi lên "bus" chung nối mọi khối. Mỗi khối tự xem địa chỉ có phải của mình không:
+// phải thì xử lý, không phải thì trả về 0. Nhờ vậy đọc về chỉ cần OR tất cả kết quả lại (dòng bus_rdata ở dưới).
+// Các khối nối với nhau:
+//   timebase (nhịp 1 ms) → rtc (giờ), buttons, beeper, display; stopwatch/cdtimer có bộ chia riêng.
+//   Sự kiện (hết giờ, báo thức, nhấn nút, nhận UART...) đi vào irq_ctrl, thành tín hiệu ngắt gửi CPU.
+// Chọn CPU: biên dịch bình thường là G1 (cpu_g1); thêm -DG2 thì dùng pipeline (cpu_pipe). Hai CPU cùng cổng, cùng tên.
 module soc_top #(
     parameter IMEM_FILE  = "",
     parameter DMEM_FILE  = "",
@@ -38,10 +47,10 @@ module soc_top #(
     wire rst = rst_sync[1];
 
     // ------------------------------------------------------------ bus
-    wire [7:0]  bus_addr;
+    wire [7:0]  bus_addr;               // địa chỉ thanh ghi (byte thấp của địa chỉ MMIO)
     wire [31:0] bus_wdata;
     wire        bus_we, bus_re;
-    wire [31:0] rd_soc, rd_irq, rd_rtc, rd_sw, rd_tmr, rd_al, rd_btn, rd_disp, rd_uart, rd_bcd;
+    wire [31:0] rd_soc, rd_irq, rd_rtc, rd_sw, rd_tmr, rd_al, rd_btn, rd_disp, rd_uart, rd_bcd;   // dữ liệu đọc của từng khối
     wire [31:0] bus_rdata = rd_soc | rd_irq | rd_rtc | rd_sw | rd_tmr | rd_al | rd_btn | rd_disp | rd_uart | rd_bcd;
 
     wire        cpu_ce, irq, div_dz, retire;
@@ -70,6 +79,7 @@ module soc_top #(
         .bus_we(bus_we), .bus_re(bus_re), .bus_rdata(bus_rdata), .irq(irq), .irq_ip(irq_ip),
         .div_dz(div_dz), .pc_out(pc), .retire(retire));
 
+    // thanh ghi hệ thống + tạo nhịp cho CPU
     soc_regs #(.G_CORE(G_CORE)) u_regs (
         .clk(clk), .rst(rst), .bus_addr(bus_addr), .bus_wdata(bus_wdata), .bus_we(bus_we), .bus_re(bus_re),
         .bus_rdata(rd_soc), .div_dz(div_dz), .cycle_count(cycle_count), .cal(cal), .cpu_ce(cpu_ce));
@@ -80,21 +90,26 @@ module soc_top #(
         .bus_addr(bus_addr), .bus_wdata(bus_wdata), .bus_we(bus_we), .bus_re(bus_re), .bus_rdata(rd_irq),
         .irq(irq), .ip(irq_ip));
 
+    // nhịp 1 ms chung của cả hệ thống (có hiệu chỉnh cal)
     timebase #(.G_N(G_N)) u_tb (.clk(clk), .rst(rst), .clr(1'b0), .en(1'b1), .cal(cal), .tick(tick_ms));
 
+    // giờ trong ngày
     rtc u_rtc (
         .clk(clk), .rst(rst), .tick_ms(tick_ms), .bus_addr(bus_addr), .bus_wdata(bus_wdata),
         .bus_we(bus_we), .bus_re(bus_re), .bus_rdata(rd_rtc),
         .ms(ms), .day(day), .dow(dow), .tick_1s(tick_1s), .loading(loading));
 
+    // bấm giờ: nhận xung nhấn nút A, B thẳng từ buttons (không qua CPU) nên chụp giờ chính xác tới chu kỳ
     stopwatch #(.G_N(G_N)) u_sw (
         .clk(clk), .rst(rst), .cal(cal), .press_a(press[1]), .press_b(press[2]), .bus_addr(bus_addr),
         .bus_wdata(bus_wdata), .bus_we(bus_we), .bus_re(bus_re), .bus_rdata(rd_sw), .capture(sw_capture));
 
+    // hẹn giờ đếm ngược; hết giờ có thể tự kích còi (tmr_beep)
     cdtimer #(.G_N(G_N)) u_tmr (
         .clk(clk), .rst(rst), .cal(cal), .bus_addr(bus_addr), .bus_wdata(bus_wdata), .bus_we(bus_we),
         .bus_re(bus_re), .bus_rdata(rd_tmr), .zero_ev(tmr_zero), .beep(tmr_beep));
 
+    // 4 báo thức, so với giờ của rtc; lúc đang nạp giờ (loading) thì không xét để tránh kêu oan
     alarm u_al (
         .clk(clk), .rst(rst), .inc(tick_ms && !loading), .ms(ms), .dow(dow), .bus_addr(bus_addr),
         .bus_wdata(bus_wdata), .bus_we(bus_we), .bus_re(bus_re), .bus_rdata(rd_al), .ev(alarm_ev));
@@ -116,6 +131,7 @@ module soc_top #(
         .clk(clk), .rst(rst), .rx(uart_rx), .tx(uart_tx), .bus_addr(bus_addr), .bus_wdata(bus_wdata),
         .bus_we(bus_we), .bus_re(bus_re), .bus_rdata(rd_uart), .rx_ev(uart_rx_ev), .tx_ev(uart_tx_ev));
 
+    // RTC_BCD là khối tùy chọn (chỉ bật khi đo thí nghiệm so sánh); tắt thì đọc ra 0 và không tốn mạch
     generate
         if (G_BCD_RTC) begin : g_bcd
             rtc_bcd u_bcd (

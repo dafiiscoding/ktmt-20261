@@ -7,6 +7,15 @@
 //         nạp lại ở mỗi cạnh cpu_ce. G1 ghi D ở cạnh pha B (cùng cạnh p nạp D cũ) → nửa sau của lệnh ghi
 //         vẫn theo D cũ, D mới bắt đầu từ cạnh pha A = đầu chu kỳ CPU kế. Nếu so thẳng với `period` (tổ hợp)
 //         thì nửa sau lệnh ghi đã theo D mới (soc_bus_tb bit 4 bắt lỗi này).
+//
+// ĐỌC NHANH: khối này giữ 4 thanh ghi "hệ thống" và tạo nhịp cho CPU:
+//   - CYCLE_COUNT: đếm số chu kỳ clock từ lúc reset (dùng để đo thời gian chạy).
+//   - CAL: số hiệu chỉnh thạch anh, đưa sang timebase.v (xem file đó).
+//   - CPU_CLK_DIV (D): chia xung để CPU chạy chậm hơn clock hệ thống. Dùng cho thí nghiệm "CPU chậm thì đo giờ lệch bao nhiêu"
+//     (E3 ở xung 32 kHz). D = 1 là CPU chạy hết tốc độ.
+//   - DIV_FLAGS: cờ báo lệnh div gần nhất có chia cho 0 không.
+//   - cpu_ce (clock enable): xung cho phép CPU bước 1 nhịp. CPU không có clock riêng, chỉ "được phép bước"
+//     mỗi D chu kỳ, như người được phép đi 1 bước mỗi khi nghe còi.
 module soc_regs #(
     parameter G_CORE = 1                 // 1 = G1 (D ≥ 2, chẵn; reset 2), 2 = G2 (D ≥ 1; reset 1)
 ) (
@@ -33,6 +42,7 @@ module soc_regs #(
     wire [15:0] period = (G_CORE == 1) ? {1'b0, d[15:1]} : d;    // G1: D/2 (D chẵn)
 
     // luật ép (mmio-map §1): G1 nhỏ hơn 2 → 2, lẻ → bỏ bit 0; G2 0 → 1
+    // (G1 cần D chẵn vì mỗi chu kỳ CPU dùng đúng 2 xung cpu_ce)
     function [15:0] norm(input [15:0] v);
         begin
             if (G_CORE == 1) norm = (v < 16'd2) ? 16'd2 : {v[15:1], 1'b0};
@@ -40,7 +50,7 @@ module soc_regs #(
         end
     endfunction
 
-    assign cpu_ce = !rst && (c >= p - 16'd1);
+    assign cpu_ce = !rst && (c >= p - 16'd1);    // đếm đủ p chu kỳ thì phát 1 xung cho phép CPU bước
 
     always @(posedge clk) begin
         if (rst) begin
@@ -53,7 +63,7 @@ module soc_regs #(
         end else begin
             cycle_count <= cycle_count + 32'd1;
             c <= cpu_ce ? 16'd0 : c + 16'd1;
-            if (cpu_ce) p <= period;
+            if (cpu_ce) p <= period;             // D mới chỉ có hiệu lực từ chu kỳ CPU kế (nạp p ở cạnh cpu_ce)
             if (bus_we) begin
                 case (bus_addr)
                     A_CAL: cal <= bus_wdata;

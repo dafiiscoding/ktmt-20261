@@ -9,6 +9,16 @@
 // Sau reset: thanh ghi đầu ra IMEM = mem[0], cạnh cpu_ce đầu tiên là pha B của lệnh 0.
 // Ngắt (C5, isa-spec §5): nhận ở pha A cuối lệnh khi irq & IE & !EXL, không stall, lệnh không phải mtc0/eret:
 //   EPC ← next_pc, PC ← 0x180, EXL ← 1 (lệnh vừa xong đã chạy trọn, kể cả ghi regfile/bộ nhớ).
+//
+// ĐỌC NHANH: CPU "đơn chu kỳ" = mỗi lệnh chạy xong trọn vẹn trong 1 chu kỳ CPU, không gối đầu nhau
+// (khác G2 là pipeline 5 tầng). Cách đọc file theo thứ tự dữ liệu chảy:
+//   1. Lấy lệnh (instr) từ IMEM theo PC  →  2. control.v giải mã ra các công tắc
+//   3. Đọc 2 thanh ghi (regfile)         →  4. ALU tính (cộng, trừ, so sánh... hoặc tính địa chỉ cho lw/sw)
+//   5. lw/sw đụng bộ nhớ DMEM hoặc vùng MMIO (ngoại vi)  →  6. ghi kết quả về thanh ghi
+//   7. tính PC kế tiếp (đi tiếp +4, nhảy, rẽ nhánh, hoặc vào ngắt).
+// Vì sao "2 pha": bộ nhớ trong FPGA (BRAM) đọc có trễ 1 nhịp, nên mỗi chu kỳ CPU chia 2 nhịp cpu_ce:
+//   pha B làm việc với bộ nhớ dữ liệu, pha A cập nhật PC/thanh ghi và lấy lệnh kế. Ghi nhớ: B (bộ nhớ) trước, A (cập nhật) sau.
+// Lệnh nhiều chu kỳ (div, bcd tuần tự): CPU "đứng" (stall), giữ nguyên PC cho đến khi khối kia báo xong (done).
 module cpu_g1 #(
     parameter IMEM_FILE  = "",
     parameter DMEM_FILE  = "",
@@ -34,16 +44,16 @@ module cpu_g1 #(
     localparam NI = 1 << G_IMEM_AW;
 
     // ------------------------------------------------------------ trạng thái
-    reg  [31:0] pc;
+    reg  [31:0] pc;                     // địa chỉ lệnh đang chạy
     reg  [31:0] instr;                  // thanh ghi đầu ra IMEM
     reg         phb;                    // 1: cạnh cpu_ce kế tiếp là pha B
-    reg  [31:0] imem [0:NI-1];
-    reg  [31:0] dmem [0:1023];
+    reg  [31:0] imem [0:NI-1];          // bộ nhớ lệnh (chương trình firmware)
+    reg  [31:0] dmem [0:1023];          // bộ nhớ dữ liệu 4 KB
     reg  [31:0] dmem_q;
     reg  [1:0]  lsel;                   // lần đọc pha B thuộc: 01 DMEM, 10 MMIO, 00 không gì (đọc 0)
-    reg         started;
+    reg         started;                // lệnh nhiều chu kỳ đã được "bấm start" rồi (tránh start lặp)
     reg  [1:0]  status;                 // [1] EXL, [0] IE
-    reg  [31:0] epc;
+    reg  [31:0] epc;                    // địa chỉ quay về sau ngắt
 
     wire ph_a = cpu_ce && !phb;
     wire ph_b = cpu_ce &&  phb;
@@ -59,14 +69,16 @@ module cpu_g1 #(
         .branch(branch), .jump(jump), .jump_reg(jump_reg), .multi(multi), .cp0_op(cp0_op),
         .uses_rs(uses_rs), .uses_rt(uses_rt), .valid(valid));
 
+    // tách các trường của lệnh 32 bit: rs, rt, rd (số thanh ghi), shamt (số bit dịch), imm (hằng 16 bit)
     wire [4:0]  f_rs = instr[25:21], f_rt = instr[20:16], f_rd = instr[15:11], f_sh = instr[10:6];
     wire [15:0] imm  = instr[15:0];
+    // mở rộng hằng 16 bit lên 32 bit: 01 thêm 0 phía trên, 10 đặt lên 16 bit cao (lui), còn lại giữ dấu
     wire [31:0] imm_x = (ext == 2'b01) ? {16'd0, imm} :
                         (ext == 2'b10) ? {imm, 16'd0} : {{16{imm[15]}}, imm};
 
     // ------------------------------------------------------------ regfile (G1 không bypass: ghi ở pha A)
     wire [31:0] rs_v, rt_v, wb;
-    wire [4:0]  wa = (dst == 2'b01) ? f_rd : (dst == 2'b10) ? f_rt : (dst == 2'b11) ? 5'd31 : 5'd0;
+    wire [4:0]  wa = (dst == 2'b01) ? f_rd : (dst == 2'b10) ? f_rt : (dst == 2'b11) ? 5'd31 : 5'd0;   // thanh ghi đích
     wire        stall;
     wire        rf_we = ph_a && reg_write && !stall;
     regfile #(.G_BYPASS(0)) u_rf (.clk(clk), .rst(rst), .we(rf_we), .wa(wa), .wd(wb),
@@ -89,9 +101,11 @@ module cpu_g1 #(
 
     wire mdone = is_div ? md_done : is_bcd ? bcd_done : 1'b0;
     // không dùng busy: ở chu kỳ start busy còn 0 (control-table §5). done đã gồm ce nên chỉ xét ở pha A.
+    // stall = đang là lệnh nhiều chu kỳ mà chưa xong → CPU đứng chờ
     assign stall = (multi != 2'b00) && !mdone;
 
     // ------------------------------------------------------------ CP0
+    // CP0 = nhóm thanh ghi điều khiển ngắt, đọc bằng mfc0: $12 Status, $13 Cause (ngắt nào đang chờ), $14 EPC
     reg [31:0] cp0_rd;
     always @* begin
         case (f_rd)
@@ -103,6 +117,8 @@ module cpu_g1 #(
     end
 
     // ------------------------------------------------------------ bộ nhớ dữ liệu (chốt ở pha B)
+    // Địa chỉ lw/sw do ALU tính (base + offset). Nếu 20 bit cao = 0 → nằm trong DMEM;
+    // nếu 24 bit cao toàn 1 (0xFFFFFFxx) → là vùng MMIO, tức đang nói chuyện với ngoại vi, không phải RAM.
     wire [31:0] maddr   = alu_y;
     wire        in_dmem = (maddr[31:12] == 20'd0);
     wire        in_mmio = (maddr[31:8] == 24'hFFFFFF);
@@ -111,9 +127,10 @@ module cpu_g1 #(
     assign bus_we    = ph_b && mem_write && in_mmio;
     assign bus_re    = ph_b && mem_read  && in_mmio;
 
-    wire [31:0] load_v = (lsel == 2'b01) ? dmem_q : (lsel == 2'b10) ? bus_rdata : 32'd0;
+    wire [31:0] load_v = (lsel == 2'b01) ? dmem_q : (lsel == 2'b10) ? bus_rdata : 32'd0;   // dữ liệu lw đọc được
 
     // ------------------------------------------------------------ ghi ngược
+    // Chọn kết quả sẽ ghi về thanh ghi: ALU (mặc định), mul, HI, LO, bcd, CP0, hoặc PC+4 (cho jal)
     reg [31:0] res;
     always @* begin
         case (res_sel)
@@ -126,13 +143,14 @@ module cpu_g1 #(
             default: res = alu_y;
         endcase
     end
-    assign wb = mem_to_reg ? load_v : res;
+    assign wb = mem_to_reg ? load_v : res;      // lw lấy từ bộ nhớ, còn lại lấy res
 
     // ------------------------------------------------------------ PC kế tiếp
     wire [31:0] pc4  = pc + 32'd4;
     wire        eq   = (rs_v == rt_v);
-    wire        take = (branch == 2'b01 && eq) || (branch == 2'b10 && !eq);
+    wire        take = (branch == 2'b01 && eq) || (branch == 2'b10 && !eq);   // beq/bne có rẽ nhánh không
     reg  [31:0] next_pc;
+    // Thứ tự ưu tiên (từ trên xuống): reset → đứng chờ → eret → jr → j/jal → rẽ nhánh → đi tiếp +4
     always @* begin
         if (rst)                  next_pc = 32'd0;
         else if (stall)           next_pc = pc;
@@ -144,8 +162,9 @@ module cpu_g1 #(
     end
 
     // nhận ngắt ở cuối lệnh này (mtc0/eret đang ghi Status cùng cạnh → chặn, isa-spec §5)
+    // Điều kiện nhận ngắt: có yêu cầu (irq), đã cho phép (IE = 1), không đang trong ngắt (EXL = 0), lệnh vừa xong trọn vẹn
     wire        take_irq = irq && status[0] && !status[1] && !stall && (cp0_op == 2'b00);
-    wire [31:0] pc_new   = take_irq ? 32'h0000_0180 : next_pc;
+    wire [31:0] pc_new   = take_irq ? 32'h0000_0180 : next_pc;       // vào ngắt thì nhảy tới địa chỉ 0x180
 
     assign pc_out = pc;
     assign retire = ph_a && !stall;
@@ -161,7 +180,7 @@ module cpu_g1 #(
     // generate if (không phải if trong initial) để Yosys/Vivado nạp được .hex khi tổng hợp
     generate
         if (IMEM_FILE != "") begin : g_imem_init
-            initial $readmemh(IMEM_FILE, imem);
+            initial $readmemh(IMEM_FILE, imem);       // nạp chương trình (file .hex do trình dịch sinh ra)
         end
         if (DMEM_FILE != "") begin : g_dmem_init
             initial $readmemh(DMEM_FILE, dmem);
@@ -179,6 +198,7 @@ module cpu_g1 #(
             lsel <= 2'b00;  dmem_q <= 32'd0;
         end else begin
             if (ph_b) begin
+                // pha B: làm việc với bộ nhớ dữ liệu (sw ghi vào DMEM; lw đọc ra dmem_q và nhớ nguồn đọc ở lsel)
                 phb <= 1'b0;
                 if (mem_write && in_dmem) dmem[maddr[11:2]] <= rt_v;
                 if (mem_read) begin
@@ -187,6 +207,7 @@ module cpu_g1 #(
                 end
             end
             if (ph_a) begin
+                // pha A: chốt PC mới (và lệnh kế tiếp ở khối always trên), cập nhật CP0
                 phb     <= 1'b1;
                 started <= (multi != 2'b00) && !mdone;
                 pc      <= pc_new;
@@ -197,8 +218,8 @@ module cpu_g1 #(
                     end
                     if (cp0_op == 2'b10) status[1] <= 1'b0;     // eret: EXL ← 0
                     if (take_irq) begin
-                        epc       <= next_pc;
-                        status[1] <= 1'b1;
+                        epc       <= next_pc;                    // nhớ chỗ quay về
+                        status[1] <= 1'b1;                       // đánh dấu đang trong ngắt (chặn ngắt lồng nhau)
                     end
                 end
             end
@@ -209,6 +230,8 @@ module cpu_g1 #(
 
 `ifndef SYNTHESIS
     // ------------------------------------------------------------ trace (isa-spec §8) + báo lệnh lạ
+    // Chỉ dùng khi mô phỏng: ghi mỗi lệnh đã xong ra file CSV (chu kỳ, pc, lệnh, thanh ghi ghi, bộ nhớ truy cập)
+    // để đối chiếu với mô hình mẫu bằng công cụ trong tools/.
     integer tf, cyc;
     initial begin
         tf = 0; cyc = 0;

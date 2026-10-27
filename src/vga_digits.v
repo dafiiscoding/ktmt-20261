@@ -5,6 +5,12 @@
 // Xung pixel = clock enable mỗi 2 chu kỳ clk (25 MHz từ 50 MHz), cùng miền clock với CPU → không CDC.
 // Mỗi pixel: (x, y) → (ô, đoạn) bằng vga_map (tổ hợp) → mã ô → char_rom → đoạn sáng/tắt → màu.
 // hsync, vsync, rgb chốt cùng một cạnh pixel (cả ba trễ đúng 1 pixel so với bộ đếm x, y → vẫn thẳng hàng).
+//
+// ĐỌC NHANH: màn hình VGA quét từng điểm ảnh từ trái sang phải, từng dòng từ trên xuống, 60 lần mỗi giây.
+// Bình thường người ta lưu cả bức ảnh trong bộ nhớ (frame buffer) rồi đọc ra. Ở đây KHÔNG có bộ nhớ ảnh:
+// với mỗi điểm ảnh (x, y) đang quét, mạch tự hỏi "điểm này thuộc đoạn nào của chữ số nào, đoạn đó có sáng không?"
+// rồi tô trắng hoặc đen ngay. Cách này gọi là "đuổi tia" (racing the beam), tiết kiệm bộ nhớ.
+// Bộ đếm hc đếm 800 cột (640 hiện + phần ẩn), vc đếm 525 dòng (480 hiện + phần ẩn), đúng chuẩn VGA 640×480@60Hz.
 
 // vga_map: (x, y) → ô (0 = DISP0, phải nhất) và đoạn 0…6 = a…g, 7 = dp; hit = 0 là nền. Bảng display-spec §7.
 // Tách module riêng để tb so thẳng với vga_points.txt (V-2). So bộ đếm hẹp với hằng 32 bit là cố ý → tắt cảnh báo độ rộng.
@@ -14,16 +20,18 @@
 module vga_map (
     input  wire [9:0] x,
     input  wire [9:0] y,
-    output wire [2:0] ci,
-    output reg  [2:0] sg,
-    output reg        hit
+    output wire [2:0] ci,       // chữ số nào (0 = phải nhất)
+    output reg  [2:0] sg,       // đoạn nào: 0..6 = a..g, 7 = chấm
+    output reg        hit       // 1 = điểm này nằm trong 1 đoạn (có thể sáng); 0 = nền
 );
+    // Màn rộng 640 chia 8 cột, mỗi cột 80 điểm cho 1 chữ số. col = x / 80, u = x lẻ trong cột.
     wire [2:0] col = x[9:4] / 3'd5;         // x / 80 = (x / 16) / 5 với x < 640 (col ≤ 7)
     wire [6:0] u   = x - {col, 6'd0} - {col, 4'd0};   // x − 80·col
-    wire [9:0] v   = y - 10'd160;
+    wire [9:0] v   = y - 10'd160;           // chữ số chỉ vẽ ở dải y từ 160 tới 320 (cao 160 điểm)
     wire       in  = (x < 10'd640) && (y >= 10'd160) && (y < 10'd320);
-    assign ci = 3'd7 - col;
+    assign ci = 3'd7 - col;                 // cột trái nhất là chữ số 7 (DISP7)
 
+    // Mỗi dòng dưới đây là 1 hình chữ nhật của 1 đoạn trong ô 80×160 (u ngang, v dọc), đúng bảng display-spec §7.
     always @* begin
         sg  = 3'd0;
         hit = 1'b0;
@@ -53,7 +61,7 @@ module vga_digits (
     output reg  [11:0] rgb                  // R[11:8] G[7:4] B[3:0]
 );
     reg        pe;                          // clock enable pixel
-    reg  [9:0] hc, vc;
+    reg  [9:0] hc, vc;                      // vị trí điểm ảnh đang quét: hc = cột (0..799), vc = dòng (0..524)
 
     always @(posedge clk) begin
         if (rst) begin
@@ -61,9 +69,9 @@ module vga_digits (
             hc <= 10'd0;
             vc <= 10'd0;
         end else begin
-            pe <= ~pe;
+            pe <= ~pe;                      // pe đảo mỗi chu kỳ → bật 1 lần mỗi 2 chu kỳ: 50 MHz thành 25 MHz điểm ảnh
             if (pe) begin
-                if (hc == 10'd799) begin
+                if (hc == 10'd799) begin    // hết 1 dòng: sang dòng mới
                     hc <= 10'd0;
                     vc <= (vc == 10'd524) ? 10'd0 : vc + 10'd1;
                 end else begin
@@ -77,9 +85,10 @@ module vga_digits (
     wire       hit;
     vga_map u_map (.x(hc), .y(vc), .ci(ci), .sg(sg), .hit(hit));
 
-    wire [7:0] cur = disp[8*ci +: 8];
+    wire [7:0] cur = disp[8*ci +: 8];       // ô đang tới
     wire [6:0] segs;                        // gfedcba
     char_rom u_rom (.code(cur[4:0]), .seg(segs));
+    // điểm này sáng nếu đoạn của nó đang bật (hoặc là dấu chấm và ô có bit chấm) VÀ chữ số không ở pha nháy tắt
     wire on = (sg == 3'd7 ? cur[7] : segs[sg]) && !dim[ci];
 
     always @(posedge clk) begin
@@ -88,6 +97,7 @@ module vga_digits (
             vsync <= 1'b1;
             rgb   <= 12'h000;
         end else if (pe) begin
+            // xung đồng bộ: hsync thấp ở cột 656..751, vsync thấp ở dòng 490..491 (chuẩn 640×480@60Hz)
             hsync <= !(hc >= 10'd656 && hc < 10'd752);
             vsync <= !(vc >= 10'd490 && vc < 10'd492);
             rgb   <= !hit ? 12'h000 : on ? 12'hFFF : 12'h222;   // hit chỉ có trong vùng hiện (y < 320, x < 640)

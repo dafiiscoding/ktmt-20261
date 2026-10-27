@@ -9,8 +9,17 @@
 // RX: cạnh xuống → chờ G_BIT/2 → còn 0 thì là start thật → lấy mẫu giữa mỗi bit → bit stop = 1 thì vào FIFO
 //     (FIFO đầy → bỏ, RX_OVF = 1), stop = 0 thì bỏ, FRAME_ERR = 1. Xong bit stop là về nghỉ ngay (giữa bit stop).
 // Cờ dính (RX_OVF, FRAME_ERR, TX_DROP): ghi 1 để xóa; sự kiện và lệnh xóa cùng chu kỳ → sự kiện thắng.
+//
+// ĐỌC NHANH: UART gửi chữ qua 1 sợi dây, từng bit một, không có đường clock đi kèm. Hai bên chỉ thỏa thuận
+// trước tốc độ (115 200 bit/giây). "8N1" nghĩa là mỗi byte gồm: 1 bit start (kéo dây xuống 0 để báo "sắp gửi"),
+// 8 bit dữ liệu (bit thấp trước), không kiểm chẵn lẻ (N), 1 bit stop (trả dây về 1). Tổng 10 bit mỗi byte.
+// Dây nghỉ ở mức 1.
+//   - Gửi (TX): CPU ghi byte vào bộ đệm, khối này tự đẩy ra từng bit theo đúng nhịp.
+//   - Nhận (RX): thấy dây rơi xuống 0 thì chờ nửa bit để chắc là start thật (không phải nhiễu), rồi lấy mẫu
+//     ĐÚNG GIỮA mỗi bit (chỗ ổn định nhất, xa mép chuyển mức nhất). Bit stop phải bằng 1, nếu không là lỗi khung.
+//   - Byte nhận được xếp vào FIFO 64 chỗ để CPU lấy dần, khỏi mất khi CPU bận.
 module uart #(
-    parameter G_BIT = 434
+    parameter G_BIT = 434               // số chu kỳ clock mỗi bit
 ) (
     input  wire        clk,
     input  wire        rst,
@@ -30,11 +39,11 @@ module uart #(
     localparam [15:0] BIT = G_BIT, HALF = G_BIT / 2;
 
     // ------------------------------------------------------------ TX
-    reg [7:0]  tbuf;
+    reg [7:0]  tbuf;                    // bộ đệm: byte CPU vừa ghi, đang chờ phát
     reg        tfull;                   // bộ đệm có byte chờ
     reg [8:0]  tsh;                     // {stop, data} còn phải phát, bit 0 ra trước
     reg [3:0]  tleft;                   // số bit còn lại của khung (0 = rảnh)
-    reg [15:0] tcnt;
+    reg [15:0] tcnt;                    // đếm chu kỳ trong 1 bit
     wire w_tx   = bus_we && bus_addr == A_TX;
     // nạp ngay cạnh cuối bit stop → khung liền nhau không có chu kỳ nghỉ thừa (đúng 10 bit/byte)
     wire t_load = tfull && (tleft == 4'd0 || (tleft == 4'd1 && tcnt == BIT - 16'd1));
@@ -43,19 +52,19 @@ module uart #(
     // ------------------------------------------------------------ RX
     reg        r1, r2, r2q;             // đồng bộ 2 FF + mẫu trước để thấy cạnh xuống
     reg [1:0]  rst_st;                  // 0 nghỉ, 1 kiểm start, 2 nhận bit
-    reg [15:0] rcnt;
+    reg [15:0] rcnt;                    // đếm chu kỳ trong 1 bit khi nhận
     reg [3:0]  rbit;                    // bit đang chờ lấy mẫu: 0…7 dữ liệu, 8 stop
-    reg [7:0]  rsh;
-    reg [7:0]  fifo [0:63];
-    reg [5:0]  rp, wp;
+    reg [7:0]  rsh;                     // thanh ghi dịch gom 8 bit dữ liệu
+    reg [7:0]  fifo [0:63];             // hàng đợi byte đã nhận
+    reg [5:0]  rp, wp;                  // con trỏ đọc / ghi
     reg [6:0]  n;                       // 0…64
-    reg        ovf, ferr, drop;
+    reg        ovf, ferr, drop;         // cờ lỗi: FIFO tràn / lỗi khung / ghi TX khi bộ đệm đầy
     localparam R_IDLE = 2'd0, R_START = 2'd1, R_DATA = 2'd2;
 
-    wire r_done = rst_st == R_DATA && rcnt == BIT - 16'd1 && rbit == 4'd8;
-    wire r_good = r_done && r2;
-    wire pop    = bus_re && bus_addr == A_RX && n != 7'd0;
-    wire push   = r_good && (n != 7'd64 || pop);
+    wire r_done = rst_st == R_DATA && rcnt == BIT - 16'd1 && rbit == 4'd8;   // vừa tới giữa bit stop
+    wire r_good = r_done && r2;                                              // bit stop = 1 → khung hợp lệ
+    wire pop    = bus_re && bus_addr == A_RX && n != 7'd0;                   // CPU đọc 1 byte ra
+    wire push   = r_good && (n != 7'd64 || pop);                             // còn chỗ trong FIFO
     assign rx_ev = push;
 
     wire w_st = bus_we && bus_addr == A_STATUS;
@@ -69,16 +78,16 @@ module uart #(
         end else begin
             // ---- TX
             if (w_tx) begin
-                if (!tfull) begin tbuf <= bus_wdata[7:0];  tfull <= 1'b1; end
+                if (!tfull) begin tbuf <= bus_wdata[7:0];  tfull <= 1'b1; end   // đầy thì bỏ byte (cờ drop bên dưới)
             end
             if (t_load) begin                                   // start bit ra ngay chu kỳ sau
                 tfull <= 1'b0;
-                tx    <= 1'b0;
-                tsh   <= {1'b1, tbuf};
+                tx    <= 1'b0;                                  // bit start = 0
+                tsh   <= {1'b1, tbuf};                          // sau 8 bit dữ liệu là bit stop = 1
                 tleft <= 4'd10;
                 tcnt  <= 16'd0;
             end else if (tleft != 4'd0) begin
-                if (tcnt == BIT - 16'd1) begin
+                if (tcnt == BIT - 16'd1) begin                  // hết 1 bit: đẩy bit kế ra chân tx
                     tcnt  <= 16'd0;
                     tleft <= tleft - 4'd1;
                     tx    <= (tleft == 4'd1) ? 1'b1 : tsh[0];   // hết khung → nghỉ
@@ -90,11 +99,14 @@ module uart #(
             // ---- RX
             r1 <= rx;  r2 <= r1;  r2q <= r2;
             case (rst_st)
+                // nghỉ: thấy cạnh xuống (trước 1, nay 0) thì có thể là bit start
                 R_IDLE:  if (r2q && !r2) begin rst_st <= R_START;  rcnt <= 16'd0; end
+                // chờ nửa bit rồi kiểm lại: còn 0 mới là start thật, về 1 là nhiễu
                 R_START: if (rcnt == HALF - 16'd1) begin
                              rst_st <= r2 ? R_IDLE : R_DATA;             // nhiễu ngắn → về nghỉ
                              rcnt <= 16'd0;  rbit <= 4'd0;
                          end else rcnt <= rcnt + 16'd1;
+                // mỗi BIT chu kỳ lấy mẫu 1 lần (đúng giữa bit): 8 bit dữ liệu, rồi bit stop
                 default: if (rcnt == BIT - 16'd1) begin                  // R_DATA: giữa bit rbit
                              rcnt <= 16'd0;
                              if (rbit == 4'd8) rst_st <= R_IDLE;

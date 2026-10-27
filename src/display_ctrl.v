@@ -2,6 +2,12 @@
 // Gói D2 · chủ: TV4 · spec: display-spec.md §2, mmio-map.md §2–§3
 // Code do Claude viết theo yêu cầu Long (02/10/2026); chủ gói đọc hiểu để vấn đáp.
 // Mọi thanh ghi chỉ-ghi → bus_rdata luôn 0 (mmio-map §2). Display RAM là flip-flop, đọc tổ hợp.
+//
+// ĐỌC NHANH: đây là "bảng viết" mà firmware ghi chữ lên, còn LED và VGA chỉ việc đọc bảng này để hiện.
+//   - disp: 8 ô, mỗi ô 8 bit (5 bit mã ký tự + 1 bit chấm thập phân). DISP0 là ô bên PHẢI nhất, DISP7 bên trái.
+//   - blink_mask: mỗi bit = 1 thì ô tương ứng nháy 2 Hz (dùng khi đặt giờ để biết đang sửa ô nào).
+//   - bright: độ sáng 0..15.
+// Firmware ghi 8 ô bằng 8 lệnh sw liên tiếp, nên có thể thấy "xé hình" nếu quét LED đúng lúc đang ghi dở.
 module display_ctrl #(
     parameter G_SLOT           = 50000,
     parameter G_BLANK          = 100,
@@ -28,10 +34,11 @@ module display_ctrl #(
                A_BLINK  = 8'h7C,   // −132
                A_BRIGHT = 8'h80;   // −128
 
-    reg [63:0] disp;
+    reg [63:0] disp;               // 8 ô × 8 bit
     reg [7:0]  blink_mask;
     reg [3:0]  bright;
 
+    // CPU ghi vào địa chỉ trong khoảng DISP0..DISP7 thì suy ra ô nào: cách nhau 4 byte nên số ô = (địa chỉ − DISP0) / 4
     wire       is_disp = (bus_addr >= A_DISP0) && (bus_addr <= A_DISP7);
     wire [7:0] doff    = bus_addr - A_DISP0;      // 0, 4, …, 28
     wire [2:0] di      = doff[4:2];               // số ô 0..7
@@ -55,9 +62,10 @@ module display_ctrl #(
         end
     end
 
-    assign bus_rdata = 32'd0;
+    assign bus_rdata = 32'd0;      // các thanh ghi này chỉ ghi, đọc luôn ra 0
     wire unused_ok = &{1'b0, bus_re, bus_wdata[31:8], doff[7:5], doff[1:0]};  // cổng giữ cho đồng bộ giao diện bus
 
+    // Hai bộ hiển thị cùng đọc bảng disp: seg7_scan cho LED thật, vga_digits cho màn hình VGA
     wire blink_ph;
     seg7_scan #(.G_DIGITS(8), .G_SLOT(G_SLOT), .G_BLANK(G_BLANK),
                 .G_AN_ACTIVE_LOW(G_AN_ACTIVE_LOW), .G_SEG_ACTIVE_LOW(G_SEG_ACTIVE_LOW)) u_scan (

@@ -6,13 +6,23 @@
 //   bus_addr = byte thấp địa chỉ (0x00–0xFC); bus_we / bus_re bật đúng 1 chu kỳ mỗi lệnh sw / lw
 //   và đã được giải mã "thuộc vùng MMIO"; bus_rdata có thanh ghi (chốt cùng cạnh với bus_re),
 //   ra 0 nếu địa chỉ không thuộc khối này → bộ giải mã có thể OR các khối lại.
+//
+// ĐỌC NHANH: file này có 4 khối, mỗi khối là 1 "dụng cụ đo thời gian" mà firmware điều khiển bằng lw/sw:
+//   1. rtc       — đồng hồ treo tường: đếm ms từ 0h, cộng dồn ngày, biết thứ mấy.
+//   2. stopwatch — bấm giờ: chạy/dừng/reset, nhớ tối đa 8 lap. Nhận nút bấm TRỰC TIẾP từ phần cứng.
+//   3. cdtimer   — hẹn giờ đếm ngược: về 0 thì báo, rồi ĐẾM TIẾP sang số âm (biết đã quá giờ bao lâu).
+//   4. alarm     — 4 báo thức theo giờ:phút và theo thứ trong tuần.
+// Quy tắc chung rất hay gặp trong file: "sự kiện thắng" = nếu cùng 1 chu kỳ vừa có sự kiện phần cứng
+// vừa có lệnh xóa cờ từ CPU thì giữ cờ lại, để CPU không bao giờ làm mất 1 sự kiện.
 
 /* verilator lint_off DECLFILENAME */   // 1 file chứa nhiều khối timer (goi-viec E2–E4)
 
 // ---------------------------------------------------------------- RTC
 // ms 0..86 399 999 trong ngày, day 16 bit (ngày từ 01/01/2000), dow 0 = CN … 6 = T7.
+// Cách đặt giờ: CPU ghi giờ mới vào SET_MS/SET_DAY (chỉ nhớ, chưa đổi), rồi ghi ARM = 1.
+// Đến tick ms kế tiếp, giờ mới mới được nạp thật. Nhờ vậy giờ không bao giờ nhảy giữa chừng 1 ms.
 module rtc #(
-    parameter G_MS_PER_DAY = 86400000
+    parameter G_MS_PER_DAY = 86400000      // số ms trong 1 ngày: 24 × 60 × 60 × 1000
 ) (
     input  wire        clk,
     input  wire        rst,
@@ -34,10 +44,10 @@ module rtc #(
                A_SET_DAY    = 8'h10,   // −240 W
                A_RTC_CTRL   = 8'h14;   // −236 R/W, [0] ARM
 
-    reg [26:0] set_ms;
+    reg [26:0] set_ms;                  // giờ muốn đặt (chờ ARM)
     reg [15:0] set_day;
     reg [2:0]  set_dow;
-    reg        arm;
+    reg        arm;                     // 1 = đã lên lịch nạp giờ ở tick kế
     reg [18:0] shadow;                  // {dow, day} chụp khi đọc MS_OF_DAY
     reg [9:0]  c1s;                     // 0..999
 
@@ -55,6 +65,7 @@ module rtc #(
             // ---- đếm thời gian
             if (tick_ms) begin
                 if (arm) begin
+                    // có lệnh đặt giờ: nạp giờ mới thay vì đếm tiếp
                     ms  <= set_ms;
                     day <= set_day;
                     dow <= set_dow;
@@ -62,6 +73,7 @@ module rtc #(
                 end else begin
                     c1s <= (c1s == 10'd999) ? 10'd0 : c1s + 10'd1;
                     if (ms == G_MS_PER_DAY - 1) begin
+                        // qua nửa đêm: ms về 0, sang ngày mới, thứ tăng (T7 → CN)
                         ms  <= 27'd0;
                         day <= day + 16'd1;                         // quay vòng 16 bit
                         dow <= (dow == 3'd6) ? 3'd0 : dow + 3'd1;
@@ -74,19 +86,21 @@ module rtc #(
             // ---- ghi (ARM ghi cùng chu kỳ với tick: tick dùng ARM cũ, nạp ở tick sau)
             if (bus_we) begin
                 case (bus_addr)
-                    A_SET_MS:  set_ms <= (bus_wdata[26:0] >= G_MS_PER_DAY) ? 27'd0 : bus_wdata[26:0];
+                    A_SET_MS:  set_ms <= (bus_wdata[26:0] >= G_MS_PER_DAY) ? 27'd0 : bus_wdata[26:0];   // giá trị vượt 1 ngày thì về 0
                     A_SET_DAY: begin
                         set_day <= bus_wdata[15:0];
-                        set_dow <= (bus_wdata[18:16] == 3'd7) ? 3'd0 : bus_wdata[18:16];
+                        set_dow <= (bus_wdata[18:16] == 3'd7) ? 3'd0 : bus_wdata[18:16];   // thứ 7 (mã 7) không hợp lệ → CN
                     end
                     A_RTC_CTRL: arm <= bus_wdata[0];                // ghi 0 = hủy lệnh nạp đang chờ
                     default: ;
                 endcase
             end else if (tick_ms && arm) begin
-                arm <= 1'b0;
+                arm <= 1'b0;                                        // đã nạp xong ở tick này, tự tắt ARM
             end
 
             // ---- đọc: giá trị trước cạnh này, nên cặp (ms, shadow) luôn cùng phía của tick
+            // Đọc MS_OF_DAY đồng thời CHỤP ngày/thứ vào shadow. Firmware đọc ms trước rồi đọc shadow,
+            // nên 2 giá trị luôn thuộc cùng 1 thời điểm, kể cả khi đọc đúng lúc qua nửa đêm.
             if (bus_re) begin
                 case (bus_addr)
                     A_MS_OF_DAY: begin
@@ -105,6 +119,10 @@ endmodule
 // ---------------------------------------------------------------- Stopwatch (E3, timer-spec §4)
 // Giá trị +1 ở mỗi tick của bộ chia riêng (en = RUN, clr khi RESET) → chạy tổng C chu kỳ thì = floor(C / G_N)
 // (CAL = 0), không lệch pha khi start/stop. SRC = 1: xung nhấn A đảo RUN ngay chu kỳ đó, B (khi chạy) chụp lap.
+//
+// Vì sao có bộ chia riêng (timebase bên trong): nó bị xóa pha ngay lúc reset và chỉ chạy khi RUN = 1, nên ms đầu
+// tiên sau khi bấm start dài đúng 1 ms. Nếu dùng chung nhịp ms của hệ thống thì ms đầu có thể ngắn hơn (sai ±1 ms).
+// SRC = 1 nghĩa là nút A/B nối thẳng vào khối này bằng phần cứng, không chờ CPU: bấm là chạy/dừng đúng chu kỳ đó.
 module stopwatch #(
     parameter G_N      = 50000,
     parameter G_SW_MAX = 359999999      // 99:59:59.999
@@ -125,9 +143,9 @@ module stopwatch #(
                A_VAL  = 8'h20,          // −224 R
                A_LAP  = 8'h24;          // −220 R (đọc thì lấy khỏi FIFO)
 
-    reg [28:0] val;
-    reg        run, src, ovf, lap_ovf;
-    reg [28:0] fifo [0:7];
+    reg [28:0] val;                     // thời gian đã đếm (ms)
+    reg        run, src, ovf, lap_ovf;  // chạy? nút nối phần cứng? tràn giờ? tràn danh sách lap?
+    reg [28:0] fifo [0:7];              // danh sách lap (8 chỗ)
     reg [2:0]  rp, wp;
     reg [3:0]  cnt;                     // 0…8
 
@@ -139,9 +157,9 @@ module stopwatch #(
 
     // va chạm cùng chu kỳ (timer-spec §4): CPU ghi SRC = 0 thắng nút A/B (bỏ, không SW_CAPTURE; BTN_EVENT vẫn có);
     // RESET thắng lap bằng B (bỏ, không SW_CAPTURE); ghi SRC = 1 không chặn nút A
-    wire hw_toggle = src && press_a && !w_cpu;
-    wire hw_lap    = src && press_b && run && !w_cpu && !w_reset;
-    wire push      = hw_lap || (w_cpu && !w_reset && bus_wdata[5]);
+    wire hw_toggle = src && press_a && !w_cpu;                  // nút A bấm: đảo chạy/dừng
+    wire hw_lap    = src && press_b && run && !w_cpu && !w_reset;   // nút B bấm khi đang chạy: chụp 1 lap
+    wire push      = hw_lap || (w_cpu && !w_reset && bus_wdata[5]);   // có lap cần cất vào danh sách
     wire pop       = bus_re && bus_addr == A_LAP && cnt != 4'd0;
     wire accept    = push && (cnt != 4'd8 || pop);
     assign capture = hw_toggle || hw_lap;
@@ -168,7 +186,7 @@ module stopwatch #(
                 rp <= 3'd0;  wp <= 3'd0;  cnt <= 4'd0;  lap_ovf <= 1'b0;
             end else begin
                 if (accept) begin
-                    fifo[wp] <= val;
+                    fifo[wp] <= val;                       // cất giá trị lúc nhấn (chính xác, vì val đang là giờ ngay lúc đó)
                     wp <= wp + 3'd1;
                 end else if (push) begin
                     lap_ovf <= 1'b1;                       // đầy → lap mới bị bỏ
@@ -194,6 +212,9 @@ endmodule
 // ---------------------------------------------------------------- Timer đếm ngược sang âm (E3, timer-spec §5)
 // Mỗi tick của bộ chia riêng (en = RUN, clr khi ghi TMR_VALUE): 1 → 0 + sự kiện ZERO; −2³¹ → đứng yên + SAT;
 // còn lại − 1 (qua 0 sang âm, không dừng).
+//
+// Ví dụ: đặt 2000 (2 giây) rồi chạy: 2000, 1999, ..., 1, 0 (phát sự kiện ZERO, có thể tự kêu còi), -1, -2, ...
+// Số âm cho biết đã quá giờ bao nhiêu ms (firmware hiển thị trị tuyệt đối kèm dấu trừ).
 module cdtimer #(
     parameter G_N = 50000
 ) (
@@ -210,9 +231,9 @@ module cdtimer #(
 );
     localparam A_VAL = 8'h28,           // −216 R/W
                A_CTL = 8'h2C;           // −212 R/W
-    localparam [31:0] MIN = 32'h8000_0000;
+    localparam [31:0] MIN = 32'h8000_0000;      // số âm nhỏ nhất, tới đó thì dừng (bão hòa)
 
-    reg [31:0] val;
+    reg [31:0] val;                     // giá trị còn lại (ms), có dấu
     reg        run, zero, beep_en, sat;
 
     wire w_val = bus_we && bus_addr == A_VAL;
@@ -220,6 +241,7 @@ module cdtimer #(
     wire tick;
     timebase #(.G_N(G_N)) u_div (.clk(clk), .rst(rst), .clr(w_val), .en(run), .cal(cal), .tick(tick));
 
+    // ZERO đúng lúc giá trị đi từ 1 xuống 0; bỏ qua nếu cùng chu kỳ CPU vừa ghi giá trị mới
     assign zero_ev = tick && !w_val && (val == 32'd1);
     assign beep    = zero_ev && beep_en;
 
@@ -233,7 +255,7 @@ module cdtimer #(
                 sat <= 1'b0;
             end else if (tick) begin
                 if (val == MIN) sat <= 1'b1;
-                else            val <= val - 32'd1;
+                else            val <= val - 32'd1;        // mỗi ms trừ 1, kể cả khi đã âm
             end
             if (w_ctl) begin
                 run     <= bus_wdata[0];
@@ -257,6 +279,10 @@ endmodule
 // ---------------------------------------------------------------- Báo thức ×4 (E4, timer-spec §6)
 // So ở tick làm RTC tăng (inc = tick_ms && !loading), dùng giá trị MỚI của ms/dow → so ở chu kỳ ngay sau.
 // Nạp RTC (loading) không bao giờ làm kêu.
+//
+// Mỗi báo thức lưu: bật/tắt (en), mặt nạ thứ (mask: 7 bit, bit nào = 1 thì kêu vào thứ đó), giờ:phút (minute).
+// Phần cứng so ms hiện tại với "phút × 60 000" (đổi sẵn khi ghi): trùng đúng ms đầu của phút đó thì báo (ev).
+// Cờ hit giữ lại cho tới khi CPU xóa, để firmware chậm vài ms cũng không lỡ.
 module alarm (
     input  wire        clk,
     input  wire        rst,
@@ -279,11 +305,13 @@ module alarm (
     reg        chk;                     // chu kỳ sau inc: ms/dow đã là giá trị mới
 
     wire       is_al = (bus_addr[7:4] == 4'h3);           // 0x30…0x3C
-    wire [1:0] sel   = bus_addr[3:2];
+    wire [1:0] sel   = bus_addr[3:2];                     // báo thức số mấy (0..3)
     // MINUTE × 60 000 bằng bộ cộng (60 000 = 0xEA60 = 2^15 + 2^14 + 2^13 + 2^11 + 2^9 + 2^6 + 2^5), dùng chung 4 báo thức
+    // (dịch bit rồi cộng thay cho phép nhân, vì 60 000 là hằng số, mạch gọn hơn bộ nhân)
     wire [26:0] m27 = {16'd0, bus_wdata[10:0]};
     wire [26:0] w_target = (m27 << 15) + (m27 << 14) + (m27 << 13) + (m27 << 11) + (m27 << 9) + (m27 << 6) + (m27 << 5);
 
+    // Báo thức g "trúng" khi: ngay sau tick, đang bật, ms đúng bằng giờ đặt, và thứ hôm nay nằm trong mặt nạ
     wire [3:0] new_hit;
     genvar g;
     generate

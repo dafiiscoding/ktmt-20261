@@ -10,6 +10,19 @@
 //   WB : ghi regfile (cạnh cuối WB); lệnh retire ở đây → trace
 // Ngắt chính xác (pipeline-policy §10): nhận ở ID/EX; lệnh ở ID/EX bị hủy, EX/MEM và MEM/WB hoàn thành; EPC = PC lệnh cũ nhất chưa retire.
 // Bong bóng (bubble) = mọi bit điều khiển bằng 0; trace chỉ ghi lệnh có valid.
+//
+// ĐỌC NHANH: pipeline giống dây chuyền rửa xe 5 trạm. Mỗi lệnh đi qua 5 trạm (IF lấy lệnh, ID giải mã,
+// EX tính, MEM bộ nhớ, WB ghi về), mỗi chu kỳ mỗi trạm làm việc cho 1 lệnh KHÁC nhau → nhanh hơn G1 (đơn chu kỳ)
+// vì clock chỉ cần chờ trạm chậm nhất, không phải cả 5 trạm cộng lại. Giữa 2 trạm có "băng chuyền" lưu tạm
+// kết quả: các thanh ghi tiền tố ifid_, idex_, exm_, mw_ (đọc: IF→ID, ID→EX, EX→MEM, MEM→WB).
+// Gặp 3 chuyện rắc rối khi gối đầu nhau, và cách xử lý trong file:
+//   1. Lệnh sau cần kết quả lệnh trước mà chưa ghi xong → "forwarding" (chuyền thẳng kết quả từ trạm sau về cho
+//      trạm EX, xem opA/opB và fwd_a/fwd_b). Riêng lw rồi dùng ngay thì không kịp → stall_lu (đứng 1 nhịp).
+//   2. Rẽ nhánh/nhảy: chỉ biết có nhảy hay không ở trạm EX, lúc đó 2 lệnh phía sau đã lỡ nạp nhầm → xóa
+//      (biến thành "bong bóng" = lệnh rỗng, mọi công tắc bằng 0).
+//   3. Lệnh nhiều chu kỳ (div, bcd): stall_busy giữ trạm EX, các trạm sau nhận bong bóng cho đến khi xong.
+// Điểm cần nhớ khi vấn đáp: ngắt "chính xác" = lệnh nào đã tới EX/MEM trở đi thì chạy trọn, lệnh còn ở ID/EX bị hủy
+// và sẽ chạy lại sau eret (EPC trỏ về lệnh cũ nhất chưa xong).
 module cpu_pipe #(
     parameter IMEM_FILE  = "",
     parameter DMEM_FILE  = "",
@@ -33,18 +46,20 @@ module cpu_pipe #(
 );
     localparam NI = 1 << G_IMEM_AW;
 
-    reg  [31:0] imem [0:NI-1];
-    reg  [31:0] dmem [0:1023];
-    reg  [31:0] pc;
+    reg  [31:0] imem [0:NI-1];          // bộ nhớ lệnh
+    reg  [31:0] dmem [0:1023];          // bộ nhớ dữ liệu
+    reg  [31:0] pc;                     // địa chỉ lệnh đang được nạp (trạm IF)
     reg  [1:0]  status;                 // [1] EXL, [0] IE
     reg  [31:0] epc;
     reg         started;                // khối nhiều chu kỳ đã nhận start (pipeline-policy §6)
 
     // ------------------------------------------------------------ IF/ID
+    // băng chuyền giữa trạm lấy lệnh và trạm giải mã: _v = lệnh có hiệu lực (0 = bong bóng)
     reg         ifid_v;
     reg  [31:0] ifid_pc, ifid_ins;
 
     // ------------------------------------------------------------ ID/EX
+    // băng chuyền giữa giải mã và tính toán: mang theo các công tắc điều khiển + 2 toán hạng đã đọc
     reg         idex_v, idex_rw, idex_m2r, idex_mrd, idex_mwr, idex_asrc, idex_jmp, idex_jr;
     reg  [3:0]  idex_actl;
     reg  [2:0]  idex_rsel;
@@ -54,12 +69,14 @@ module cpu_pipe #(
     reg  [25:0] idex_j;
 
     // ------------------------------------------------------------ EX/MEM
+    // băng chuyền giữa tính toán và bộ nhớ: kết quả ALU (cũng là địa chỉ cho lw/sw) và dữ liệu cần ghi (exm_st)
     reg         exm_v, exm_rw, exm_m2r, exm_mrd, exm_mwr;
     reg  [31:0] exm_res, exm_st, exm_pc, exm_ins;
     reg  [4:0]  exm_dst;
     reg  [1:0]  exm_cp0;                // cờ CP0 đi theo lệnh (cho quy tắc chặn ngắt sau mtc0/eret)
 
     // ------------------------------------------------------------ MEM/WB
+    // băng chuyền cuối: sau trạm này kết quả được ghi vào thanh ghi (mw_dst)
     reg         mw_v, mw_rw, mw_m2r, mw_mrd, mw_mwr, mw_lmmio;
     reg  [31:0] mw_res, mw_mdata, mw_st, mw_addr, mw_pc, mw_ins;
     reg  [4:0]  mw_dst;
@@ -81,17 +98,20 @@ module cpu_pipe #(
     wire [31:0] imm_x = (d_ext == 2'b01) ? {16'd0, imm16} :
                         (d_ext == 2'b10) ? {imm16, 16'd0} : {{16{imm16[15]}}, imm16};
 
+    // thanh ghi đích của lệnh (0 nếu băng chuyền đang rỗng hoặc lệnh không ghi thanh ghi)
     wire [4:0] d_dst = (!ifid_v)      ? 5'd0 :
                        (dst_sel == 2'b01) ? f_rd :
                        (dst_sel == 2'b10) ? f_rt :
                        (dst_sel == 2'b11) ? 5'd31 : 5'd0;
 
     wire [31:0] rs_v, rt_v, wb;
-    wire        we_rf = cpu_ce && mw_v && mw_rw;
+    wire        we_rf = cpu_ce && mw_v && mw_rw;        // ghi thanh ghi ở trạm WB
     regfile #(.G_BYPASS(1)) u_rf (.clk(clk), .rst(rst), .we(we_rf), .wa(mw_dst), .wd(wb),
                                   .ra1(f_rs), .ra2(f_rt), .rd1(rs_v), .rd2(rt_v));
 
     // ------------------------------------------------------------ hazard + forwarding (B5)
+    // hazard.v quyết định: có phải đứng chờ (stall_lu) không, lấy toán hạng từ đâu (fwd_a/fwd_b: 00 từ ID/EX,
+    // 01 từ WB, 10 từ EX/MEM)
     wire        stall_lu, flush;
     wire [1:0]  fwd_a, fwd_b;
     wire        stall_busy;
@@ -99,7 +119,7 @@ module cpu_pipe #(
     wire        take_irq;
     reg         irq_tr;                 // nhận ngắt ở chu kỳ trước → ghi dòng INTERRUPT sau khi lệnh EX/MEM đã retire
     reg         last_cp0;               // lệnh retire gần nhất là CP0 (khớp quy tắc block của ISS)
-    wire [31:0] irq_epc = idex_v ? idex_pc : ifid_v ? ifid_pc : pc;
+    wire [31:0] irq_epc = idex_v ? idex_pc : ifid_v ? ifid_pc : pc;     // lệnh cũ nhất chưa xong → địa chỉ quay về
     hazard u_haz (
         .ifid_valid(ifid_v), .ifid_rs(f_rs), .ifid_rt(f_rt), .ifid_uses_rs(uses_rs), .ifid_uses_rt(uses_rt),
         .idex_mem_read(idex_mrd), .idex_dst(idex_dst), .idex_rs(idex_rs), .idex_rt(idex_rt),
@@ -107,6 +127,7 @@ module cpu_pipe #(
         .taken(take), .stall_lu(stall_lu), .flush(flush), .fwd_a(fwd_a), .fwd_b(fwd_b));
 
     // ------------------------------------------------------------ EX
+    // opA/opB: toán hạng thật sự đưa vào ALU, đã "chuyền thẳng" từ trạm sau nếu cần
     wire [31:0] opA = (fwd_a == 2'b10) ? exm_res : (fwd_a == 2'b01) ? wb : idex_a;
     wire [31:0] opB = (fwd_b == 2'b10) ? exm_res : (fwd_b == 2'b01) ? wb : idex_b;
     wire [31:0] alu_b = idex_asrc ? idex_imm : opB;
@@ -124,7 +145,7 @@ module cpu_pipe #(
                  .x(opA), .busy(bc_busy), .done(bc_done), .y(bcd_y));
 
     wire mdone = (idex_multi == 2'b01) ? md_done : (idex_multi == 2'b10) ? bc_done : 1'b1;
-    assign stall_busy = (idex_multi != 2'b00) && !mdone;
+    assign stall_busy = (idex_multi != 2'b00) && !mdone;      // lệnh div/bcd chưa xong → giữ trạm EX
 
     reg [31:0] cp0_rd;
     always @* begin
@@ -136,6 +157,7 @@ module cpu_pipe #(
         endcase
     end
 
+    // chọn kết quả của trạm EX: ALU (mặc định), mul, HI, LO, bcd, CP0, hoặc PC+4 (jal)
     reg [31:0] ex_res;
     always @* begin
         case (idex_rsel)
@@ -150,6 +172,7 @@ module cpu_pipe #(
     end
 
     // nhánh/nhảy quyết định ở EX (pipeline-policy §5); không tính khi EX đang bận
+    // take = 1 nghĩa là phải đổi hướng: các lệnh đã nạp nhầm phía sau bị xóa, PC nhảy tới tgt
     wire eq = (opA == opB);
     assign take = idex_v && !stall_busy &&
                   ((idex_br == 2'b01 && eq) || (idex_br == 2'b10 && !eq) || idex_jmp || idex_jr || (idex_cp0 == 2'b10));
@@ -159,6 +182,7 @@ module cpu_pipe #(
                                             idex_pc4 + {idex_imm[29:0], 2'b00};
 
     // ------------------------------------------------------------ MEM
+    // địa chỉ lw/sw nằm trong exm_res: 20 bit cao = 0 → DMEM; 0xFFFFFFxx → MMIO (ngoại vi)
     wire in_dmem = (exm_res[31:12] == 20'd0);
     wire in_mmio = (exm_res[31:8] == 24'hFFFFFF);
     assign bus_addr  = {exm_res[7:2], 2'b00};
@@ -167,18 +191,18 @@ module cpu_pipe #(
     assign bus_re    = cpu_ce && exm_v && exm_mrd && in_mmio;
 
     // ------------------------------------------------------------ WB
-    wire [31:0] wb_ld = mw_lmmio ? bus_rdata : mw_mdata;
-    assign wb = mw_m2r ? wb_ld : mw_res;
+    wire [31:0] wb_ld = mw_lmmio ? bus_rdata : mw_mdata;     // dữ liệu lw: từ ngoại vi hay từ DMEM
+    assign wb = mw_m2r ? wb_ld : mw_res;                     // giá trị ghi về thanh ghi
 
     assign pc_out = pc;
-    assign retire = cpu_ce && mw_v;
+    assign retire = cpu_ce && mw_v;                          // lệnh xong khi rời trạm WB
 
     // quyết định tầng ID: lệnh ở IF/ID có đi tiếp sang ID/EX không
     // nhận ngắt (§10): không khi EX bận (div/bcd), không khi load-use đang chờ, không ngay sau/trước lệnh CP0
     assign take_irq = cpu_ce && irq && status[0] && !status[1] && !stall_busy && !stall_lu
                       && !(idex_v && idex_cp0 != 2'b00) && (idex_multi == 2'b00)
                       && !(exm_v ? (exm_cp0 != 2'b00) : mw_v ? (mw_cp0 != 2'b00) : last_cp0);
-    wire id_ok = ifid_v && !take && !stall_lu && !take_irq;
+    wire id_ok = ifid_v && !take && !stall_lu && !take_irq;    // 0 → chèn bong bóng thay vì chuyển lệnh sang EX
 
     // ------------------------------------------------------------ thanh ghi
 `ifndef SYNTHESIS
@@ -197,6 +221,8 @@ module cpu_pipe #(
         end
     endgenerate
 
+    // Mỗi cạnh cpu_ce, TẤT CẢ các băng chuyền cùng dịch 1 bước (đọc từ dưới lên cho dễ hiểu: MEM/WB nhận từ EX/MEM,
+    // EX/MEM nhận từ EX, ID/EX nhận từ ID, IF/ID nhận lệnh mới)
     always @(posedge clk) begin
         if (rst) begin
             pc <= 32'd0;  status <= 2'b00;  epc <= 32'd0;  started <= 1'b0;
@@ -277,6 +303,8 @@ module cpu_pipe #(
 
 `ifndef SYNTHESIS
     // ------------------------------------------------------------ trace (isa-spec §8) + kiểm trong mô phỏng
+    // Chỉ dùng khi mô phỏng: ghi mỗi lệnh xong ở trạm WB ra file CSV để đối chiếu với mô hình mẫu (cùng khuôn với G1),
+    // và in cảnh báo ASSERT nếu thấy lỗi thiết kế (forward từ lw, lệnh lạ).
     integer tf, cyc, n_ret;
     reg [31:0] tr_end;                  // testbench đặt: không ghi trace lệnh có PC ≥ tr_end (lệnh sau cuối chương trình)
     initial begin

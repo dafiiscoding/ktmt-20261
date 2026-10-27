@@ -1,9 +1,15 @@
 // char_rom.v — mã ký tự 5 bit → đoạn gfedcba (bit 0 = a, mức cao = sáng), tổ hợp
 // Gói D1 · chủ: TV4 · spec: display-spec.md §3 (bảng mã), vector tb/vectors/seg7.txt
 // Code do Claude viết theo yêu cầu Long (01/10/2026); chủ gói đọc hiểu để vấn đáp.
+//
+// ĐỌC NHANH: đây là "bảng tra chữ" cho LED 7 đoạn. Nhận mã ký tự (0..0x19), trả về 7 bit cho 7 đoạn.
+// Một chữ số LED có 7 đoạn đặt tên a b c d e f g (a = đoạn ngang trên cùng, g = đoạn ngang giữa).
+// Bit nào = 1 thì đoạn đó sáng. Ví dụ số 8 sáng cả 7 đoạn nên 7'h7F; số 1 chỉ sáng b, c nên 7'h06.
+// Mã 0x0..0xF trùng với chữ số hex (0..9, A..F), nhờ vậy kết quả lệnh bcd ghi thẳng ra màn được.
+// Mã 0x10..0x19 là các chữ cái dùng cho chữ "AL", "CH"... và dấu "-".
 module char_rom (
-    input  wire [4:0] code,
-    output reg  [6:0] seg
+    input  wire [4:0] code,   // mã ký tự 5 bit
+    output reg  [6:0] seg     // 7 đoạn, bit 0 = a ... bit 6 = g
 );
     always @* begin
         case (code)
