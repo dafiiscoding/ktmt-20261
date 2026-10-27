@@ -1,0 +1,7 @@
+# 2026-10-02 10:46 · Icarus Verilog version 14.0 (devel) (s20260301-500-g2e81fcccb-dirty)
+# lenh: bash tools/run_unit.sh rtc
+# sha1 a40904ff2013b5b9986ccca0c320f9315c800e04 *src/timers.v
+# sha1 e5a9d224bf588e31788e7710f60429f5b7f2828a *tb/rtc_tb.v
+PASS rtc_tb 22
+tb/rtc_tb.v:124: $finish called at 61320000 (1ps)
+# exit=0

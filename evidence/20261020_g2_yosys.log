@@ -1,0 +1,28 @@
+# 2026-10-20 Yosys G1 vs G2 — synth_xilinx -top soc_top -flatten -run :map_ffs, IMEM = work/main.hex (chparam)
+# Luu y: lan dau khong nap IMEM cho ra 154 o (IMEM = 0 → CPU bi rut gon); bo, khong dung so do.
+== soc_top G1 (log work/yosys_soc_top_G1_20261020.log)
+    14958 cells
+       10   $_DFFE_PP_
+       30   $_DFF_P_
+     1024   $_SDFFCE_PN0P_
+       18   $_SDFFCE_PP0P_
+        4   $_SDFFCE_PP1P_
+     1380   $_SDFFE_PP0P_
+       39   $_SDFFE_PP1P_
+      181   $_SDFF_PP0_
+        4   DSP48E1
+        1   RAMB36E1
+       10   RAM32M
+== soc_top G2 (log work/yosys_soc_top_G2_20261020.log)
+        4   DSP48E1
+        2   RAMB36E1
+       10   RAM32M
+    13280 cells
+       69   $_DFF_P_
+     1024   $_SDFFCE_PN0P_
+     1727   $_SDFFE_PP0P_
+       38   $_SDFFE_PP1P_
+      181   $_SDFF_PP0_
+        4   DSP48E1
+        2   RAMB36E1
+       10   RAM32M

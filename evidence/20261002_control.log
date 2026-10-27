@@ -1,0 +1,6 @@
+# 2026-10-02 11:33 · Icarus Verilog version 14.0 (devel) (s20260301-500-g2e81fcccb-dirty)
+# lenh: bash tools/run_unit.sh control
+# sha1 3d964cfa71f324c0ad7c2bcdfc3970c9c3585696 *src/control.v
+# sha1 944cb1ef3f7bf46b0a7f98cabde844506f1fe081 *tb/control_tb.v
+# sha1 67f219f38848ea9834c8cf9650b0d952a6c769e1 *tb/vectors/control.txt
+PASS control_tb 82646

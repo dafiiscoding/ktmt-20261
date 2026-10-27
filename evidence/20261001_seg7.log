@@ -1,0 +1,9 @@
+# 2026-10-01 22:52 · Icarus Verilog version 14.0 (devel) (s20260301-500-g2e81fcccb-dirty)
+# lenh: bash tools/run_unit.sh seg7
+# nguon: src/char_rom.v src/seg7_scan.v tb/seg7_tb.v
+# sha1 a326e2c2ef6b2b51caf37ece14d991d638af9b2e *src/char_rom.v
+# sha1 7484d57c2bb7857ade0c926d3a88f7299bd6f7dd *src/seg7_scan.v
+# sha1 0cd61cd4f06c3a12048649f3e3cf170504a7de67 *tb/seg7_tb.v
+PASS seg7_tb 25362
+tb/seg7_tb.v:152: $finish called at 168720000 (1ps)
+# exit=0

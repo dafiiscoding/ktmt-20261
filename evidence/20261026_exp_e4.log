@@ -1,0 +1,12 @@
+# 2026-10-26 — E4′ bóng ma (tb/exp_e4_tb.v, mặc định 200 000 chu kỳ)
+# Mô hình: anode vật lý = an RTL kéo dài T_OFF chu kỳ (giả định). Kiểm: ghost = (T_OFF − gap) × số ranh giới (trừ 8→1).
+# Bản 800 000 chu kỳ chạy trước khi đổi check: m0..m7 ghost 630 560 2520 2240 10080 8960 32480 31360 = công thức (tính lại bằng python).
+E4 G_SLOT=50000 G_BLANK=0 T_OFF=50 gap=5 on=200135 ghost=135 ti_le=0.067%
+E4 G_SLOT=50000 G_BLANK=100 T_OFF=50 gap=10 on=199720 ghost=120 ti_le=0.060%
+E4 G_SLOT=12500 G_BLANK=0 T_OFF=50 gap=5 on=200675 ghost=630 ti_le=0.314%
+E4 G_SLOT=12500 G_BLANK=100 T_OFF=50 gap=10 on=199000 ghost=560 ti_le=0.281%
+E4 G_SLOT=3125 G_BLANK=0 T_OFF=50 gap=5 on=202835 ghost=2520 ti_le=1.242%
+E4 G_SLOT=3125 G_BLANK=100 T_OFF=50 gap=10 on=196120 ghost=2240 ti_le=1.142%
+E4 G_SLOT=3125 G_BLANK=0 T_OFF=150 gap=5 on=209135 ghost=8120 ti_le=3.883%
+E4 G_SLOT=3125 G_BLANK=100 T_OFF=150 gap=10 on=202420 ghost=7840 ti_le=3.873%
+PASS exp_e4_tb 9

@@ -1,0 +1,8 @@
+# 2026-10-01 22:52 · Icarus Verilog version 14.0 (devel) (s20260301-500-g2e81fcccb-dirty)
+# lenh: bash tools/run_unit.sh muldiv
+# nguon: src/muldiv.v tb/muldiv_tb.v
+# sha1 9991def613c9e537ee44e269c121495d1ee6562d *src/muldiv.v
+# sha1 a5d5ba797346a8ad9008d324f71a30ac7750980a *tb/muldiv_tb.v
+PASS muldiv_tb 5806
+tb/muldiv_tb.v:117: $finish called at 1632500000 (1ps)
+# exit=0

@@ -1,0 +1,1065 @@
+<!doctype html>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WatchChip họp nhóm 01</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: bảng dữ liệu kỹ thuật (datasheet) — cột mục lục dính bên trái, nội dung một cột ~72ch */
+:root {
+  --bg: #f6f7f5;
+  --panel: #ffffff;
+  --fg: #1c2421;
+  --muted: #5b6863;
+  --line: #d9dfdb;
+  --accent: #1d6b57;     /* xanh mặt nạ hàn PCB */
+  --accent-soft: #e2efe9;
+  --copper: #a35a1f;     /* đồng mạ */
+  --copper-soft: #f6e8db;
+  --code-bg: #eef2ef;
+  --warn-bg: #fdf3e4;
+  --s1: #cfe6dc; --s2: #d6e2f0; --s3: #f1dcc7; --s4: #e6d8ee; --s5: #e9e4c9; /* 5 tầng pipeline */
+  --font-body: "Be Vietnam Pro", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", Consolas, "Courier New", monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #111715; --panel: #18201d; --fg: #e3e9e6; --muted: #98a5a0; --line: #2c3833;
+    --accent: #5cc0a1; --accent-soft: #1d2f29; --copper: #e09a5c; --copper-soft: #2e2219; --code-bg: #1f2925; --warn-bg: #2d241a;
+    --s1: #24443a; --s2: #263649; --s3: #4a3524; --s4: #3b2c47; --s5: #3e3a22;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #111715; --panel: #18201d; --fg: #e3e9e6; --muted: #98a5a0; --line: #2c3833;
+  --accent: #5cc0a1; --accent-soft: #1d2f29; --copper: #e09a5c; --copper-soft: #2e2219; --code-bg: #1f2925; --warn-bg: #2d241a;
+  --s1: #24443a; --s2: #263649; --s3: #4a3524; --s4: #3b2c47; --s5: #3e3a22;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--fg);
+  font: 15px/1.7 var(--font-body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.wrap { max-width: 1140px; margin: 0 auto; display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 48px; padding-block: 40px 80px; }
+nav.toc { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 24px); align-self: start; font-size: 13px; max-height: calc(100vh - 48px); overflow-y: auto; }
+nav.toc .lbl { font: 600 11px/1 var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; }
+nav.toc ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+nav.toc a { display: block; padding: 3px 10px; border-left: 2px solid var(--line); color: var(--muted); text-decoration: none; }
+nav.toc a:hover, nav.toc a:focus-visible { color: var(--accent); border-left-color: var(--accent); }
+nav.toc ol ol { padding-left: 12px; }
+main { min-width: 0; }
+header.top { border-bottom: 1px solid var(--line); padding-bottom: 24px; margin-bottom: 8px; }
+.eyebrow { font: 600 12px/1 var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--copper); }
+h1 { font-size: 30px; line-height: 1.25; margin: 10px 0 12px; text-wrap: balance; font-weight: 700; }
+h2 { font-size: 22px; margin: 60px 0 14px; padding-top: 14px; border-top: 2px solid var(--fg); text-wrap: balance; display: flex; gap: 12px; align-items: baseline; }
+h2 .no { font: 600 14px var(--font-mono); color: var(--accent); }
+h3 { font-size: 18px; margin: 34px 0 8px; text-wrap: balance; }
+h4 { font-size: 13px; margin: 24px 0 6px; font-family: var(--font-mono); text-transform: uppercase; letter-spacing: .06em; color: var(--accent); }
+p, li { max-width: 72ch; }
+ul, ol { padding-left: 22px; }
+li + li { margin-top: 5px; }
+a { color: var(--accent); }
+a:focus-visible, button:focus-visible, input:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+code { font: 0.86em var(--font-mono); background: var(--code-bg); padding: 1px 5px; border-radius: 3px; }
+pre { font: 13px/1.55 var(--font-mono); background: var(--code-bg); padding: 14px 16px; border-radius: 4px; overflow-x: auto; margin: 12px 0; }
+pre code { background: none; padding: 0; }
+.meta { color: var(--muted); font-size: 14px; display: grid; gap: 6px; }
+.note { background: var(--warn-bg); border-left: 3px solid var(--copper); padding: 12px 16px; margin: 16px 0; max-width: 76ch; }
+.note p { margin: 0; }
+.note p + p { margin-top: 8px; }
+.easy { background: var(--accent-soft); border-radius: 6px; padding: 14px 18px; margin: 16px 0; max-width: 76ch; }
+.easy .lb { font: 600 11px/1 var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--accent); display: block; margin-bottom: 8px; }
+.easy p { margin: 0; }
+.easy p + p, .easy ul { margin-top: 8px; }
+.ex { border: 1px dashed var(--copper); border-radius: 6px; padding: 12px 18px; margin: 16px 0; max-width: 76ch; }
+.ex .lb { font: 600 11px/1 var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--copper); display: block; margin-bottom: 8px; }
+.ex p { margin: 6px 0; }
+.tbl { overflow-x: auto; margin: 12px 0; }
+table { border-collapse: collapse; width: 100%; font-size: 14px; font-variant-numeric: tabular-nums; }
+th, td { text-align: left; vertical-align: top; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+th { font: 600 11px/1.3 var(--font-mono); text-transform: uppercase; letter-spacing: .06em; color: var(--muted); border-bottom: 1.5px solid var(--fg); }
+td.k { white-space: nowrap; font-weight: 600; }
+td.m, th.m { font-family: var(--font-mono); text-align: center; white-space: nowrap; }
+.tag { display: inline-block; font: 600 11px/1.6 var(--font-mono); padding: 0 6px; border-radius: 3px; background: var(--accent-soft); color: var(--accent); white-space: nowrap; }
+.tag.c { background: var(--copper-soft); color: var(--copper); }
+.tv-jump { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 4px; }
+.tv-jump a { font: 600 13px var(--font-mono); text-decoration: none; padding: 6px 12px; border: 1px solid var(--line); border-radius: 4px; background: var(--panel); color: var(--fg); }
+.tv-jump a:hover { border-color: var(--accent); color: var(--accent); }
+section.tv { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 4px 24px 20px; margin-top: 24px; }
+section.tv h3 { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
+.big { font-weight: 700; color: var(--copper); }
+ol.checks { list-style: none; padding: 0; display: grid; gap: 8px; }
+ol.checks label { display: flex; gap: 10px; align-items: flex-start; cursor: pointer; max-width: 72ch; }
+ol.checks input { margin-top: 6px; accent-color: var(--accent); flex: none; }
+ol.cross > li { margin-top: 14px; }
+details.qa { border-top: 1px solid var(--line); padding: 8px 0; max-width: 76ch; }
+details.qa summary { cursor: pointer; font-weight: 600; }
+details.qa > div { padding: 6px 0 4px 18px; color: var(--fg); }
+details.qa > div p { margin: 4px 0; }
+.q { color: var(--muted); }
+figure { margin: 18px 0; }
+figure .svgbox { overflow-x: auto; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 12px; }
+figure svg { display: block; max-width: 100%; height: auto; }
+figcaption { font-size: 13px; color: var(--muted); margin-top: 6px; max-width: 76ch; }
+svg text { font-family: var(--font-mono); fill: var(--fg); }
+svg .mut { fill: var(--muted); }
+svg .ln { stroke: var(--fg); fill: none; }
+svg .ln2 { stroke: var(--muted); fill: none; stroke-dasharray: 3 3; }
+svg .ac { stroke: var(--accent); fill: none; }
+svg .cu { stroke: var(--copper); fill: none; }
+svg .box { fill: var(--panel); stroke: var(--fg); }
+svg .boxa { fill: var(--accent-soft); stroke: var(--accent); }
+svg .f1 { fill: var(--s1); } svg .f2 { fill: var(--s2); } svg .f3 { fill: var(--s3); } svg .f4 { fill: var(--s4); } svg .f5 { fill: var(--s5); }
+svg .bub { fill: var(--code-bg); stroke: var(--muted); stroke-dasharray: 3 2; }
+.read-guide { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin: 16px 0; }
+.read-guide > div { border: 1px solid var(--line); border-radius: 6px; padding: 10px 14px; background: var(--panel); font-size: 14px; min-width: 0; }
+.read-guide b { display: block; margin-bottom: 2px; }
+footer { margin-top: 64px; color: var(--muted); font-size: 13px; border-top: 1px solid var(--line); padding-top: 16px; }
+@media (max-width: 860px) {
+  .wrap { grid-template-columns: minmax(0, 1fr); gap: 0; padding-block: 24px 64px; }
+  nav.toc { display: none; }
+  h1 { font-size: 25px; }
+  section.tv { padding: 2px 16px 16px; }
+}
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
+</style>
+
+<div class="wrap">
+<nav class="toc" aria-label="Mục lục">
+  <div class="lbl">Mục lục</div>
+  <ol>
+    <li><a href="#doc">Cách đọc trang</a></li>
+    <li><a href="#nen">A · Kiến thức nền từ số 0</a>
+      <ol>
+        <li><a href="#a1">A1 Chip, Verilog, mô phỏng</a></li>
+        <li><a href="#a2">A2 Bit, hex, số âm</a></li>
+        <li><a href="#a3">A3 Clock, chu kỳ</a></li>
+        <li><a href="#a4">A4 CPU làm gì</a></li>
+        <li><a href="#a5">A5 Lệnh, hợp ngữ</a></li>
+        <li><a href="#a6">A6 Đơn chu kỳ, pipeline</a></li>
+        <li><a href="#a7">A7 Hazard</a></li>
+        <li><a href="#a8">A8 Ngoại vi, MMIO</a></li>
+        <li><a href="#a9">A9 Polling, ngắt</a></li>
+        <li><a href="#a10">A10 Kiểm thử</a></li>
+      </ol>
+    </li>
+    <li><a href="#s0">0 · Chương trình</a></li>
+    <li><a href="#s1">1 · Bức tranh chung</a></li>
+    <li><a href="#s2">2 · Luật học, cổng</a></li>
+    <li><a href="#s3">3 · Bảng chia việc</a></li>
+    <li><a href="#s4">4 · Từng người</a>
+      <ol>
+        <li><a href="#tv1">TV1 ALU</a></li>
+        <li><a href="#tv2">TV2 Công cụ</a></li>
+        <li><a href="#tv3">TV3 CPU</a></li>
+        <li><a href="#tv4">TV4 Hiển thị</a></li>
+        <li><a href="#tv5">TV5 Định thời</a></li>
+      </ol>
+    </li>
+    <li><a href="#s5">5 · Câu chéo</a></li>
+    <li><a href="#s6">6 · Cần chốt</a></li>
+    <li><a href="#s7">7 · Từ điển</a></li>
+  </ol>
+</nav>
+
+<main>
+<header class="top">
+  <div class="eyebrow">BTL KTMT MI4344 · SoC WatchChip</div>
+  <h1>Họp nhóm 01: bàn giao, chia việc, học gói</h1>
+  <div class="meta">
+    <div>Soạn 27/10/2026 (Claude soạn theo lời Long). Mọi số liệu của đồ án trỏ về file trong <code>evidence/</code> hoặc <code>report/</code>.</div>
+    <div>Số mục "kiến thức" theo sách P&amp;H <i>Computer Organization and Design, MIPS Edition</i>, bản 5. Dùng bản khác thì tìm theo tên mục.</div>
+  </div>
+  <div class="note"><p><b>Đọc trước khi họp:</b> nếu chưa học môn này, đọc phần <b>A</b> trước (30 phút). Sau đó đọc mục 1 (5 phút) và phần của mình ở mục 4 (30 phút). Mang laptop đã chạy được <code>source tools/env.sh</code>.</p></div>
+</header>
+
+<h2 id="doc"><span class="no">·</span>Cách đọc trang này</h2>
+<p>Trang viết cho cả người chưa học Kiến trúc máy tính. Có 3 loại khung:</p>
+<div class="read-guide">
+  <div style="background:var(--accent-soft)"><b>Nói đơn giản</b>Giải thích bằng ví dụ đời thường. Đọc khung này trước để biết "nó là cái gì".</div>
+  <div style="border-style:dashed;border-color:var(--copper)"><b>Ví dụ từng bước</b>Làm một ví dụ nhỏ bằng số thật, để tự tay làm lại được.</div>
+  <div style="background:var(--warn-bg)"><b>Lưu ý</b>Chỗ dễ hiểu sai, hoặc kết luận chỉ đúng trong phạm vi nhất định.</div>
+</div>
+<p>Phần chữ thường là nội dung chi tiết dùng để trả lời thầy. Chữ <code>như thế này</code> là tên file, tên tín hiệu hoặc lệnh gõ vào máy, phải gọi đúng tên.</p>
+
+<!-- ======================= A. KIẾN THỨC NỀN ======================= -->
+<h2 id="nen"><span class="no">A</span>Kiến thức nền từ số 0</h2>
+<p>Phần này giải thích các khái niệm mà mọi phần sau đều dùng. Không cần nhớ hết ngay; gặp từ lạ ở mục 4 thì quay lại đây hoặc tra từ điển ở mục 7.</p>
+
+<h3 id="a1">A1. Con chip, Verilog và "chỉ mô phỏng"</h3>
+<div class="easy"><span class="lb">Nói đơn giản</span>
+  <p>Một con chip là hàng triệu công tắc tí hon (transistor) nối với nhau. Ngày nay không ai vẽ tay từng công tắc. Người ta <b>viết mô tả mạch bằng một ngôn ngữ</b>, giống viết code, rồi phần mềm tự biến mô tả đó thành mạch. Ngôn ngữ nhóm dùng là <b>Verilog</b>.</p>
+</div>
+<ul>
+  <li><b>Verilog khác code thường ở chỗ nào:</b> code Python chạy từng dòng theo thứ tự. Verilog mô tả <b>dây nối và linh kiện</b>; mọi phần của mạch chạy <b>cùng lúc</b>. Ví dụ dòng <code>assign y = a &amp; b;</code> không phải "tính rồi gán", mà nghĩa là "có một cổng AND, đầu vào nối a và b, đầu ra nối y", và y luôn đổi theo a, b.</li>
+  <li><b>RTL</b> (Register Transfer Level) là cách viết Verilog ở mức "thanh ghi nào chuyển dữ liệu sang thanh ghi nào ở mỗi nhịp clock". Cả đồ án viết ở mức này.</li>
+  <li><b>Mô phỏng</b> là chạy mạch trên máy tính bằng phần mềm (nhóm dùng <code>iverilog</code>): phần mềm tính từng tín hiệu thay đổi thế nào theo thời gian, như "chạy thử" con chip mà không cần chế tạo.</li>
+  <li><b>Vì sao chỉ mô phỏng:</b> đề bài chỉ yêu cầu mô phỏng (<code>docs/de-bai.md</code> câu 4), và nhóm không có board FPGA. Hệ quả: không đo được tốc độ tối đa thật (<b>Fmax</b>), vì Fmax cần phần mềm của hãng FPGA (ví dụ Vivado) phân tích mạch sau khi đặt lên chip.</li>
+  <li><b>SoC</b> (System on Chip) là cả một hệ thống trên 1 chip: CPU + bộ nhớ + các khối phụ (đồng hồ, màn hình, cổng nối tiếp...). "WatchChip" là SoC của nhóm.</li>
+</ul>
+<div class="note"><p><b>Lưu ý:</b> khi mô phỏng, nhiều test dùng <b>tham số nhỏ</b> cho nhanh. Ví dụ 1 ms thật là 50 000 chu kỳ clock, nhưng test hệ thống dùng <code>G_N = 50</code> (<code>docs/goi-viec.md</code>), vì mô phỏng 1 ngày thật ở tốc độ thật mất 4,3·10⁹ chu kỳ, chạy không nổi. Thí nghiệm E1′, E2′ thì dùng giá trị thật 50 000.</p></div>
+
+<h3 id="a2">A2. Bit, số nhị phân, số hex, số âm</h3>
+<div class="easy"><span class="lb">Nói đơn giản</span>
+  <p>Máy tính chỉ biết 2 trạng thái: có điện (1) và không điện (0). Mỗi trạng thái là 1 <b>bit</b>. Ghép nhiều bit lại thì biểu diễn được số, giống ghép nhiều chữ số 0–9 để viết số lớn.</p>
+</div>
+<ul>
+  <li><b>Nhị phân:</b> mỗi vị trí có giá trị gấp đôi vị trí bên phải. <code>1101</code> = 8 + 4 + 0 + 1 = 13.</li>
+  <li><b>Hex (cơ số 16)</b> là cách viết gọn: 4 bit thành 1 ký tự 0–9, A–F (A = 10, ..., F = 15). Số 32 bit viết bằng 8 ký tự hex, có tiền tố <code>0x</code>. Ví dụ <code>0x7FFFFFFF</code> = 0111 1111 ... 1111.</li>
+  <li><b>32 bit:</b> CPU của nhóm làm việc với số 32 bit, tức mỗi "ô" chứa được 2³² ≈ 4,3 tỷ giá trị khác nhau.</li>
+  <li><b>Số âm, bù 2 (two's complement):</b> bit trái nhất (bit 31) là <b>bit dấu</b>: 0 là dương, 1 là âm. Muốn đổi dấu một số: lật hết các bit rồi cộng 1. Nhờ vậy phép cộng số âm và số dương dùng chung một mạch cộng.
+    <ul>
+      <li>Số lớn nhất: <code>0x7FFFFFFF</code> = 2 147 483 647. Số nhỏ nhất: <code>0x80000000</code> = −2 147 483 648.</li>
+      <li><code>−1</code> = <code>0xFFFFFFFF</code> (toàn bit 1).</li>
+    </ul>
+  </li>
+  <li><b>Tràn (overflow):</b> kết quả vượt khỏi khoảng biểu diễn được thì "quay vòng", ra số sai. Ví dụ <code>0x7FFFFFFF + 1</code> = <code>0x80000000</code>: số dương lớn nhất cộng 1 lại thành số âm nhỏ nhất. Tràn là lý do ALU phải cẩn thận ở lệnh <code>slt</code> (xem TV1).</li>
+  <li><b>BCD</b> (Binary-Coded Decimal): mỗi chữ số thập phân 0–9 dùng riêng 4 bit. Số 13 ở dạng BCD là <code>0001 0011</code> (chữ số 1, chữ số 3), khác nhị phân thường <code>1101</code>. Đồng hồ cần BCD vì màn hình hiện từng chữ số thập phân.</li>
+</ul>
+
+<h3 id="a3">A3. Clock, chu kỳ và MHz</h3>
+<div class="easy"><span class="lb">Nói đơn giản</span>
+  <p><b>Clock</b> là tín hiệu nhịp, lên xuống đều đặn như máy đập nhịp của nhạc công. Mỗi lần clock đi lên (gọi là <b>sườn lên</b>), mọi thanh ghi trong chip đồng loạt "chụp" giá trị mới. Giữa 2 sườn lên là 1 <b>chu kỳ</b>.</p>
+</div>
+<ul>
+  <li><b>50 MHz</b> = 50 triệu chu kỳ mỗi giây → 1 chu kỳ = 1 / 50 000 000 giây = <b>20 ns</b> (nano giây).</li>
+  <li>Vì thế <b>1 ms = 50 000 chu kỳ</b> ở 50 MHz. Đây là con số gốc của toàn bộ phần định thời (TV5).</li>
+  <li><b>Thanh ghi (register / flip-flop, FF):</b> ô nhớ nhỏ, chỉ đổi giá trị ở sườn clock. <b>Mạch tổ hợp</b>: không có nhớ, đầu ra đổi ngay theo đầu vào (ví dụ mạch cộng). Một mạch số là các thanh ghi xen giữa các đám mạch tổ hợp.</li>
+  <li><b>Tốc độ tối đa (Fmax):</b> trong 1 chu kỳ, tín hiệu phải đi hết qua đám mạch tổ hợp dài nhất giữa 2 thanh ghi. Đám càng dài thì chu kỳ phải càng dài, clock càng chậm. Đây là lý do có pipeline (A6).</li>
+  <li><b>Clock enable:</b> muốn một khối chạy chậm hơn (ví dụ 25 MHz) thì không tạo clock mới, mà dùng chung clock 50 MHz và chỉ cho khối "chụp" ở một nửa số sườn. Cách này an toàn hơn trên FPGA.</li>
+</ul>
+
+<h3 id="a4">A4. CPU làm gì</h3>
+<div class="easy"><span class="lb">Nói đơn giản</span>
+  <p>CPU giống một người làm theo danh sách việc viết sẵn trên giấy. Người đó lặp mãi 3 bước: <b>đọc dòng tiếp theo</b> → <b>hiểu dòng đó bảo làm gì</b> → <b>làm</b>. Rồi lại đọc dòng kế. Một ngón tay chỉ vào dòng đang đọc, đó là <b>PC</b>.</p>
+</div>
+<figure>
+  <div class="svgbox">
+  <svg viewBox="0 0 640 210" width="640" role="img" aria-label="Sơ đồ CPU: PC trỏ vào bộ nhớ lệnh, lệnh đi qua giải mã, đọc thanh ghi, ALU, bộ nhớ dữ liệu rồi ghi lại thanh ghi">
+    <defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" style="fill:var(--fg)"/></marker></defs>
+    <rect class="boxa" x="10" y="80" width="60" height="44" rx="4"/><text x="40" y="107" text-anchor="middle" font-size="13">PC</text>
+    <rect class="box" x="100" y="70" width="100" height="64" rx="4"/><text x="150" y="98" text-anchor="middle" font-size="12">IMEM</text><text x="150" y="116" text-anchor="middle" font-size="10" class="mut">bộ nhớ lệnh</text>
+    <rect class="box" x="230" y="70" width="90" height="64" rx="4"/><text x="275" y="98" text-anchor="middle" font-size="12">Giải mã</text><text x="275" y="116" text-anchor="middle" font-size="10" class="mut">control</text>
+    <rect class="box" x="350" y="20" width="90" height="56" rx="4"/><text x="395" y="45" text-anchor="middle" font-size="12">Regfile</text><text x="395" y="62" text-anchor="middle" font-size="10" class="mut">32 thanh ghi</text>
+    <rect class="box" x="350" y="120" width="90" height="56" rx="4"/><text x="395" y="146" text-anchor="middle" font-size="12">ALU</text><text x="395" y="163" text-anchor="middle" font-size="10" class="mut">tính toán</text>
+    <rect class="box" x="480" y="120" width="100" height="56" rx="4"/><text x="530" y="146" text-anchor="middle" font-size="12">DMEM / MMIO</text><text x="530" y="163" text-anchor="middle" font-size="10" class="mut">dữ liệu, ngoại vi</text>
+    <path class="ln" d="M70,102 H98" marker-end="url(#ar)"/>
+    <path class="ln" d="M200,102 H228" marker-end="url(#ar)"/>
+    <path class="ln" d="M320,95 L348,55" marker-end="url(#ar)"/>
+    <path class="ln" d="M395,76 V118" marker-end="url(#ar)"/>
+    <path class="ln" d="M440,148 H478" marker-end="url(#ar)"/>
+    <path class="ac" d="M580,148 H610 V10 H470 V30 H442" marker-end="url(#ar)"/>
+    <text x="616" y="90" font-size="10" class="mut" transform="rotate(90 616 90)">ghi lại kết quả</text>
+    <path class="cu" d="M40,124 V196 H395 V178" />
+    <text x="120" y="192" font-size="10" class="mut">PC + 4 hoặc địa chỉ nhảy (sau mỗi lệnh)</text>
+  </svg>
+  </div>
+  <figcaption>Đường đi của một lệnh trong CPU (vẽ đơn giản, chưa phải hình H2 của báo cáo). Mũi tên đồng: sau mỗi lệnh PC được cập nhật để trỏ lệnh kế.</figcaption>
+</figure>
+<ul>
+  <li><b>PC</b> (Program Counter): địa chỉ của lệnh đang chạy. Mỗi lệnh dài 4 byte, nên bình thường PC tăng 4. Lệnh nhảy thì PC đổi sang chỗ khác.</li>
+  <li><b>IMEM</b> (bộ nhớ lệnh): chứa chương trình (firmware). <b>DMEM</b> (bộ nhớ dữ liệu): chứa biến.</li>
+  <li><b>Regfile</b> (tệp thanh ghi): 32 ô, mỗi ô 32 bit, tên <code>$0</code>…<code>$31</code> (hay gọi <code>$t0</code>, <code>$s1</code>...). Nhanh hơn bộ nhớ rất nhiều; CPU tính toán trên các ô này. Ô <code>$zero</code> luôn bằng 0, ghi vào cũng không đổi.</li>
+  <li><b>ALU</b> (Arithmetic Logic Unit): khối tính cộng, trừ, AND, OR, so sánh, dịch bit.</li>
+  <li><b>Control</b> (khối điều khiển): đọc mã lệnh rồi bật/tắt các "công tắc" trong CPU: ALU làm phép gì, có ghi thanh ghi không, có đọc bộ nhớ không... Bảng ghi rõ lệnh nào bật công tắc nào gọi là <b>bảng chân lý điều khiển</b> (<code>control-table.md</code>).</li>
+  <li><b>Datapath</b> (đường dữ liệu): toàn bộ dây và khối mà dữ liệu đi qua (hình trên). CPU = datapath + control.</li>
+</ul>
+
+<h3 id="a5">A5. Lệnh, hợp ngữ, MIPS</h3>
+<div class="easy"><span class="lb">Nói đơn giản</span>
+  <p>Mỗi <b>lệnh</b> là một việc rất nhỏ, như "cộng 2 ô này", "đọc ô nhớ kia", "nếu bằng nhau thì nhảy tới dòng X". Chương trình là hàng nghìn lệnh nhỏ như thế. <b>MIPS</b> là một bộ quy tắc lệnh nổi tiếng, rất hay dùng để dạy vì gọn và đều.</p>
+</div>
+<ul>
+  <li><b>ISA</b> (Instruction Set Architecture, kiến trúc tập lệnh): "hợp đồng" giữa phần mềm và phần cứng, quy định có những lệnh nào, mỗi lệnh mã hóa thành bit ra sao và làm gì. Nhóm chọn <b>28 lệnh</b> của MIPS (<code>docs/isa-spec.md</code>), cộng vài lệnh riêng cho đồng hồ như <code>bcd</code>.</li>
+  <li><b>Hợp ngữ (assembly)</b>: viết lệnh bằng chữ cho người đọc. <b>Mã máy</b>: dạng bit 32 bit mà CPU thật sự đọc. <b>Assembler</b> là chương trình dịch hợp ngữ → mã máy (TV2 giữ <code>tools/asm.py</code>).</li>
+  <li><b>Firmware</b>: chương trình chạy trên chip, ở đây là <code>fw/main.s</code> viết bằng hợp ngữ MIPS, khoảng 1 230 dòng.</li>
+</ul>
+<div class="ex"><span class="lb">Ví dụ: vài lệnh MIPS</span>
+<pre><code>addu  $t2, $t0, $t1     # $t2 = $t0 + $t1
+lw    $t0, -252($zero)  # đọc ô nhớ ở địa chỉ 0 + (-252) vào $t0   (đây là "đọc giờ")
+sw    $t0, 8($sp)       # ghi $t0 vào ô nhớ ở địa chỉ $sp + 8
+beq   $t0, $t1, xong    # nếu $t0 == $t1 thì nhảy tới nhãn "xong"
+slt   $t2, $t0, $t1     # $t2 = 1 nếu $t0 &lt; $t1 (có dấu), ngược lại 0</code></pre>
+<p>Mỗi dòng trên khi dịch ra là đúng 1 số 32 bit. Có 3 kiểu mã hóa: <b>R</b> (3 thanh ghi, như <code>addu</code>), <b>I</b> (có hằng số 16 bit, như <code>lw</code>, <code>beq</code>), <b>J</b> (nhảy xa).</p>
+</div>
+
+<h3 id="a6">A6. Đơn chu kỳ (G1) và pipeline (G2)</h3>
+<div class="easy"><span class="lb">Nói đơn giản: giặt đồ</span>
+  <p>Giặt 1 mẻ đồ có 4 bước: giặt, sấy, gấp, cất. <b>Cách 1</b> (đơn chu kỳ): làm xong hết 4 bước của mẻ 1 rồi mới bắt đầu mẻ 2. <b>Cách 2</b> (pipeline, "dây chuyền"): mẻ 1 vừa chuyển sang máy sấy thì mẻ 2 vào máy giặt ngay. Mỗi mẻ vẫn mất 4 bước, nhưng cứ mỗi bước lại có một mẻ xong, nên tổng thể nhanh hơn nhiều.</p>
+</div>
+<ul>
+  <li><b>G1 đơn chu kỳ:</b> mỗi lệnh làm hết mọi việc trong <b>1 chu kỳ</b>. Đơn giản, dễ hiểu, nhưng chu kỳ phải đủ dài cho lệnh chậm nhất, nên clock chậm (G1 chạy 25 MHz).</li>
+  <li><b>G2 pipeline 5 tầng:</b> chia việc của 1 lệnh thành 5 bước, mỗi bước 1 chu kỳ, và 5 lệnh khác nhau cùng ở 5 bước khác nhau. Mỗi tầng ngắn hơn nên clock nhanh hơn (G2 chạy 50 MHz).</li>
+</ul>
+<div class="tbl"><table>
+  <thead><tr><th>Tầng</th><th>Tên đầy đủ</th><th>Làm gì</th></tr></thead>
+  <tbody>
+    <tr><td class="k">IF</td><td>Instruction Fetch</td><td>lấy lệnh từ IMEM theo PC</td></tr>
+    <tr><td class="k">ID</td><td>Instruction Decode</td><td>giải mã, đọc 2 thanh ghi nguồn</td></tr>
+    <tr><td class="k">EX</td><td>Execute</td><td>ALU tính (cộng, so sánh, tính địa chỉ)</td></tr>
+    <tr><td class="k">MEM</td><td>Memory</td><td>đọc/ghi DMEM hoặc thanh ghi ngoại vi</td></tr>
+    <tr><td class="k">WB</td><td>Write Back</td><td>ghi kết quả vào regfile</td></tr>
+  </tbody>
+</table></div>
+<figure>
+  <div class="svgbox">
+  <svg viewBox="0 0 600 196" width="600" role="img" aria-label="Biểu đồ pipeline: 4 lệnh, mỗi lệnh đi qua IF ID EX MEM WB, lệnh sau bắt đầu chậm hơn 1 chu kỳ">
+    <text x="10" y="18" font-size="11" class="mut">chu kỳ →</text>
+    <g font-size="11" text-anchor="middle">
+      <text x="135" y="18">1</text><text x="195" y="18">2</text><text x="255" y="18">3</text><text x="315" y="18">4</text><text x="375" y="18">5</text><text x="435" y="18">6</text><text x="495" y="18">7</text><text x="555" y="18">8</text>
+    </g>
+    <g font-size="11">
+      <text x="10" y="50">lệnh 1</text><text x="10" y="90">lệnh 2</text><text x="10" y="130">lệnh 3</text><text x="10" y="170">lệnh 4</text>
+    </g>
+    <g font-size="11" text-anchor="middle">
+      <!-- row1 -->
+      <rect class="f1" x="106" y="32" width="58" height="28" rx="3"/><text x="135" y="50">IF</text>
+      <rect class="f2" x="166" y="32" width="58" height="28" rx="3"/><text x="195" y="50">ID</text>
+      <rect class="f3" x="226" y="32" width="58" height="28" rx="3"/><text x="255" y="50">EX</text>
+      <rect class="f4" x="286" y="32" width="58" height="28" rx="3"/><text x="315" y="50">MEM</text>
+      <rect class="f5" x="346" y="32" width="58" height="28" rx="3"/><text x="375" y="50">WB</text>
+      <!-- row2 -->
+      <rect class="f1" x="166" y="72" width="58" height="28" rx="3"/><text x="195" y="90">IF</text>
+      <rect class="f2" x="226" y="72" width="58" height="28" rx="3"/><text x="255" y="90">ID</text>
+      <rect class="f3" x="286" y="72" width="58" height="28" rx="3"/><text x="315" y="90">EX</text>
+      <rect class="f4" x="346" y="72" width="58" height="28" rx="3"/><text x="375" y="90">MEM</text>
+      <rect class="f5" x="406" y="72" width="58" height="28" rx="3"/><text x="435" y="90">WB</text>
+      <!-- row3 -->
+      <rect class="f1" x="226" y="112" width="58" height="28" rx="3"/><text x="255" y="130">IF</text>
+      <rect class="f2" x="286" y="112" width="58" height="28" rx="3"/><text x="315" y="130">ID</text>
+      <rect class="f3" x="346" y="112" width="58" height="28" rx="3"/><text x="375" y="130">EX</text>
+      <rect class="f4" x="406" y="112" width="58" height="28" rx="3"/><text x="435" y="130">MEM</text>
+      <rect class="f5" x="466" y="112" width="58" height="28" rx="3"/><text x="495" y="130">WB</text>
+      <!-- row4 -->
+      <rect class="f1" x="286" y="152" width="58" height="28" rx="3"/><text x="315" y="170">IF</text>
+      <rect class="f2" x="346" y="152" width="58" height="28" rx="3"/><text x="375" y="170">ID</text>
+      <rect class="f3" x="406" y="152" width="58" height="28" rx="3"/><text x="435" y="170">EX</text>
+      <rect class="f4" x="466" y="152" width="58" height="28" rx="3"/><text x="495" y="170">MEM</text>
+      <rect class="f5" x="526" y="152" width="58" height="28" rx="3"/><text x="555" y="170">WB</text>
+    </g>
+    <path class="ln2" d="M344,26 V186 M286,26 V186"/>
+  </svg>
+  </div>
+  <figcaption>Ở chu kỳ 4 (giữa 2 nét đứt), 4 lệnh cùng chạy ở 4 tầng khác nhau. Sau khi dây chuyền đầy, mỗi chu kỳ có 1 lệnh xong.</figcaption>
+</figure>
+<ul>
+  <li><b>Thanh ghi tầng (pipeline register):</b> giữa 2 tầng có một dãy thanh ghi để "chuyển giao" lệnh sang tầng sau, giống băng chuyền. Tên theo 2 tầng hai bên: IF/ID, ID/EX, EX/MEM, MEM/WB.</li>
+  <li><b>CPI</b> (Cycles Per Instruction): trung bình mỗi lệnh tốn bao nhiêu chu kỳ. Lý tưởng là 1. Thực tế lớn hơn vì có lúc phải chờ (A7) hoặc chờ phép chia.</li>
+  <li><b>Thời gian chạy</b> = số lệnh × CPI × thời gian 1 chu kỳ = số lệnh × CPI / tần số. Phải nhìn cả CPI lẫn tần số, không nhìn riêng CPI.</li>
+</ul>
+
+<h3 id="a7">A7. Hazard: khi dây chuyền bị vướng</h3>
+<div class="easy"><span class="lb">Nói đơn giản</span>
+  <p>Dây chuyền chạy êm khi các mẻ không liên quan nhau. Nhưng nếu mẻ 2 cần đồ của mẻ 1 mà mẻ 1 chưa xong thì phải xử lý. Tình huống đó gọi là <b>hazard</b> (xung đột). Có 3 cách xử lý: <b>chuyển tắt</b>, <b>chờ</b>, hoặc <b>bỏ việc làm nhầm</b>.</p>
+</div>
+<ul>
+  <li><b>Data hazard (xung đột dữ liệu):</b> lệnh sau cần kết quả của lệnh trước mà kết quả chưa được ghi vào regfile (phải tới tầng WB mới ghi).
+    <ul>
+      <li><b>Forwarding</b> (chuyển tiếp): kết quả đã tính xong ở EX, đang nằm trong thanh ghi tầng, thì nối dây đưa thẳng về cho lệnh sau, khỏi chờ ghi vào regfile.</li>
+      <li><b>Stall</b> (chờ): có trường hợp chuyển tắt cũng không kịp (lệnh <code>lw</code> đọc bộ nhớ, tới cuối tầng MEM mới có dữ liệu). Khi đó lệnh sau phải đứng yên 1 chu kỳ. Chỗ trống trong dây chuyền gọi là <b>bong bóng (bubble)</b>.</li>
+    </ul>
+  </li>
+  <li><b>Control hazard (xung đột điều khiển):</b> lệnh nhảy <code>beq</code> tới tầng EX mới biết có nhảy hay không. Trong lúc đó CPU đã lấy sẵn 2 lệnh phía sau (đoán là "không nhảy"). Nếu thật sự nhảy thì 2 lệnh đó lấy nhầm, phải <b>xóa (flush)</b>: mất 2 chu kỳ.</li>
+  <li><b>Structural hazard (xung đột tài nguyên):</b> 2 lệnh cùng muốn dùng 1 khối. Nhóm tránh bằng thiết kế (IMEM và DMEM tách riêng).</li>
+</ul>
+
+<h3 id="a8">A8. Ngoại vi và MMIO</h3>
+<div class="easy"><span class="lb">Nói đơn giản</span>
+  <p><b>Ngoại vi</b> là các khối phụ quanh CPU: đồng hồ đếm giờ, nút bấm, màn LED, còi, cổng nối tiếp. CPU nói chuyện với chúng bằng cách <b>đọc/ghi vào một số "địa chỉ đặc biệt"</b>, giống bỏ thư vào những hộp thư có số nhà riêng. Cách này gọi là <b>MMIO</b> (Memory-Mapped I/O, vào/ra ánh xạ bộ nhớ).</p>
+</div>
+<ul>
+  <li>CPU không có lệnh riêng kiểu "bật đèn". Nó chỉ dùng <code>sw</code> (ghi) và <code>lw</code> (đọc). <b>Bus</b> nhìn địa chỉ: địa chỉ thường thì gửi tới DMEM, địa chỉ đặc biệt thì gửi tới ngoại vi tương ứng.</li>
+  <li>Ở WatchChip, các địa chỉ ngoại vi nằm ở vùng <b>cuối</b> không gian 4 GB (địa chỉ coi như số âm). Vì thế firmware đọc bằng <code>lw</code> với offset âm từ <code>$zero</code>. Ví dụ <code>lw $t0, −252($zero)</code> đọc thanh ghi <code>MS_OF_DAY</code> (số ms đã trôi qua trong ngày). −252 viết dạng 32 bit là <code>0xFFFFFF04</code>.</li>
+  <li>Bảng đầy đủ địa chỉ nào là thanh ghi nào: <code>docs/mmio-map.md</code> (TV4 vẽ thành hình H6).</li>
+</ul>
+
+<h3 id="a9">A9. Polling, ngắt và capture</h3>
+<div class="easy"><span class="lb">Nói đơn giản: chờ khách</span>
+  <p><b>Polling</b>: cứ vài phút ra cửa xem có khách chưa. <b>Ngắt (interrupt)</b>: lắp chuông cửa, đang làm gì thì làm, chuông kêu mới ra. <b>Capture</b>: lắp camera ghi lại đúng giây khách tới, lúc rảnh mới xem. Với đồng hồ, cách thứ 3 cho thời điểm chính xác nhất.</p>
+</div>
+<ul>
+  <li><b>Ngắt</b> diễn ra thế này: ngoại vi bật tín hiệu <code>irq</code> → CPU làm xong lệnh hiện tại → <b>lưu địa chỉ lệnh kế vào EPC</b> (để lát quay lại) → nhảy tới địa chỉ cố định <code>0x180</code> nơi có đoạn code xử lý (<b>handler</b>) → handler làm xong thì chạy lệnh <code>eret</code> để quay về chỗ cũ.</li>
+  <li><b>CP0</b> là bộ thanh ghi điều khiển riêng cho ngắt: <b>Status</b> (có cho phép ngắt không: bit <code>IE</code>; đang ở trong handler không: bit <code>EXL</code>), <b>Cause</b> (ngắt vì sao), <b>EPC</b> (quay lại đâu). Đọc/ghi bằng lệnh <code>mfc0</code>/<code>mtc0</code>.</li>
+  <li><b>Ngắt chính xác (precise):</b> khi vào handler, mọi lệnh trước điểm EPC đã chạy xong hoàn toàn, mọi lệnh từ EPC trở đi chưa để lại dấu vết gì. Nhờ vậy quay về chạy tiếp không sai.</li>
+  <li><b>Câu hỏi của đồ án</b> chính là so 3 cách này: muốn đo thời điểm chính xác tới 1 ms thì cách nào phải làm bằng phần cứng (thí nghiệm E3, mục 1).</li>
+</ul>
+
+<h3 id="a10">A10. Kiểm thử: làm sao biết chip đúng</h3>
+<div class="easy"><span class="lb">Nói đơn giản</span>
+  <p>Viết mạch xong không tự biết đúng hay sai. Phải viết thêm <b>testbench</b>: một chương trình mô phỏng đưa đầu vào cho mạch, rồi so đầu ra với đáp án. Đúng hết thì in <b>PASS</b>, sai chỗ nào in <b>FAIL</b> kèm chỗ sai.</p>
+</div>
+<ul>
+  <li><b>Test đơn vị (unit test):</b> kiểm riêng từng khối (ALU, bộ chia...). File <code>tb/*_tb.v</code>, chạy bằng <code>bash tools/run_unit.sh &lt;tên&gt;</code>.</li>
+  <li><b>Vector:</b> bộ đầu vào + đáp án do script Python sinh ra, ví dụ <code>tb/vectors/div.txt</code> có 830 phép chia.</li>
+  <li><b>Golden model</b> (mô hình chuẩn): một bản "CPU viết bằng Python" (<code>tools/iss.py</code>) chạy cùng chương trình. Chip Verilog phải cho kết quả giống hệt nó từng lệnh một (<b>co-simulation</b>).</li>
+  <li><b>MARS:</b> trình mô phỏng MIPS có sẵn của người khác. Dùng để kiểm chéo, phòng khi chính golden model của nhóm cũng hiểu sai.</li>
+  <li><b>Kiểm thử đột biến (mutation):</b> cố ý làm hỏng code (đổi 1 dấu) rồi chạy test. Test tốt phải FAIL. Nếu vẫn PASS thì test có lỗ hổng.</li>
+  <li><b>Hồi quy (regression):</b> chạy lại toàn bộ test sau mỗi lần sửa, để chắc sửa chỗ này không làm hỏng chỗ khác. Toàn bộ mất khoảng 25 phút.</li>
+  <li><b>Evidence:</b> mỗi lần chạy lưu log vào <code>evidence/</code>. Mọi con số trong báo cáo phải chỉ được về một file log.</li>
+</ul>
+
+<!-- ======================= 0. CHƯƠNG TRÌNH ======================= -->
+<h2 id="s0"><span class="no">0</span>Chương trình họp (~90 phút)</h2>
+<div class="tbl"><table>
+  <thead><tr><th>Phút</th><th>Việc</th><th>Ai</th></tr></thead>
+  <tbody>
+    <tr><td class="k">0–10</td><td>Mục 1, bức tranh chung: con chip làm gì, đang ở đâu</td><td>Long</td></tr>
+    <tr><td class="k">10–20</td><td>Mục 2, luật học và 4 bài ở mỗi cổng. Quan trọng: code phần lớn do AI viết, người chủ phải hiểu từng dòng</td><td>Long</td></tr>
+    <tr><td class="k">20–60</td><td>Mục 4, mỗi TV 8 phút: đọc phần mình, hỏi chỗ chưa hiểu, nhận việc</td><td>từng TV</td></tr>
+    <tr><td class="k">60–75</td><td>Mục 5, câu chéo: ai cũng phải trả lời được</td><td>cả nhóm</td></tr>
+    <tr><td class="k">75–90</td><td>Mục 6, chốt quyết định và điền <code>docs/hop-tuan.md</code></td><td>Long</td></tr>
+  </tbody>
+</table></div>
+
+<!-- ======================= 1. BỨC TRANH CHUNG ======================= -->
+<h2 id="s1"><span class="no">1</span>Bức tranh chung</h2>
+<h3>1.1. Sản phẩm là gì</h3>
+<div class="easy"><span class="lb">Nói đơn giản</span>
+  <p>Nhóm làm "bộ não" của một chiếc đồng hồ điện tử kiểu Casio: tự thiết kế CPU, tự thiết kế các khối đếm giờ, màn hình, nút bấm, còi, rồi viết chương trình chạy trên đó. Tất cả chạy trong máy tính bằng mô phỏng.</p>
+</div>
+<p>Một <b>con chip đồng hồ điện tử</b> (SoC "WatchChip") viết bằng Verilog, chỉ chạy mô phỏng, không có board:</p>
+<ul>
+  <li><b>CPU MIPS tự thiết kế</b>, 28 lệnh, 2 bản: <b>G1</b> đơn chu kỳ, <b>G2</b> pipeline 5 tầng (A6).</li>
+  <li><b>Ngoại vi đồng hồ</b>: timebase chuẩn ms có hiệu chỉnh <code>CAL</code>, RTC (đồng hồ thời gian thực), stopwatch (bấm giờ), timer đếm ngược, 4 báo thức, 4 nút, quét LED 7 đoạn, VGA (xuất màn hình máy tính), còi, UART (cổng nối tiếp với PC), bộ điều khiển ngắt.</li>
+  <li><b>Firmware</b> <code>fw/main.s</code> (hợp ngữ MIPS): 5 chế độ TIME → STOPWATCH → TIMER → ALARM → SET, đồng bộ giờ với PC qua UART.</li>
+</ul>
+<pre><code>   nút ──► buttons ─┐                       ┌──► seg7_scan ──► LED 7 đoạn
+                    │   ┌──────────────┐    │
+ UART RX ─► uart ───┼──►│  bus + MMIO  │◄──►├──► vga_digits ──► VGA
+                    │   │  (soc_regs)  │    │
+ timebase ─► timers ┘   └──────┬───────┘    └──► beeper ──► còi
+ (CAL)   (rtc, sw, tmr, alarm) │  ▲ irq_ctrl (8 nguồn ngắt)
+                        ┌──────▼──┴────┐
+                        │  CPU G1 / G2 │◄── IMEM (firmware) + DMEM
+                        └──────────────┘</code></pre>
+<p class="q">Đọc sơ đồ: bên trái là các khối tạo dữ liệu vào (nút, UART, bộ đếm giờ); bên phải là các khối xuất ra (LED, VGA, còi). Ở giữa là bus, nơi CPU đọc/ghi mọi khối qua MMIO (A8). <code>irq_ctrl</code> gom 8 loại sự kiện thành 1 tín hiệu ngắt cho CPU (A9).</p>
+<div class="note"><p><b>Câu hỏi xuyên suốt đồ án:</b> "Muốn đồng hồ chuẩn tới 1 ms thì phần nào phải là phần cứng?"</p>
+<p>Đáp án có số đo (thí nghiệm E3): nếu CPU tự đọc giờ khi thấy nút được bấm, thì trễ tới <b>1,36 ms</b> khi CPU chạy ở xung 32 kHz. Nếu phần cứng tự <b>chụp thời điểm (capture)</b> ngay lúc bấm, thì sai <b>0 chu kỳ</b> ở mọi tốc độ CPU (<code>report/2.5-e3-thi-nghiem.md</code>). Tức là: phần đo thời điểm phải là phần cứng; phần hiển thị, chỉnh giờ để phần mềm làm được.</p></div>
+
+<h3>1.2. Đang ở đâu</h3>
+<p class="q"><span class="tag">verified</span> hồi quy 27/10, <code>evidence/20261027_regress_rbuf.log</code>, EXIT 0 (lệnh kết thúc không lỗi).</p>
+<div class="tbl"><table>
+  <thead><tr><th>Hạng mục</th><th>Trạng thái</th></tr></thead>
+  <tbody>
+    <tr><td class="k">Toàn bộ RTL, firmware, công cụ</td><td><b>xong</b>, hồi quy 41 mục PASS</td></tr>
+    <tr><td class="k"><code>system_tb</code> (firmware thật chạy trên chip)</td><td>589 kiểm PASS, cả G1 lẫn G2, cả có ngắt lẫn không</td></tr>
+    <tr><td class="k">So với mô hình tham chiếu</td><td>ISS 25 chương trình, MARS 19, pytest 97 (test của công cụ Python)</td></tr>
+    <tr><td class="k">Thí nghiệm E1′–E4′, CPI, DSE</td><td>Claude chạy mẫu, có nháp báo cáo; <b>TV phải chạy lại</b></td></tr>
+    <tr><td class="k">Báo cáo</td><td>khung LaTeX <code>report/latex/</code> và 9 mục có nháp</td></tr>
+    <tr><td class="k">Còn thiếu</td><td>hình H1–H8, waveform (ảnh dạng sóng tín hiệu), chữ của các TV, Fmax (không có Vivado)</td></tr>
+  </tbody>
+</table></div>
+<div class="note"><p><b>Nói thẳng:</b> phần lớn code do Claude viết theo yêu cầu của Long (đầu mỗi file có ghi nguồn gốc, <code>KE-HOACH</code> §4b). Việc của mỗi người từ giờ <b>không phải viết code mới</b>, mà là <b>hiểu gói của mình tới mức giải thích từng dòng, sửa tại chỗ khi thầy đổi yêu cầu, và tự làm phần trình bày</b>.</p></div>
+
+<h3>1.3. Mốc</h3>
+<div class="tbl"><table>
+  <thead><tr><th>Ngày</th><th>Mốc</th><th>Cần gì</th></tr></thead>
+  <tbody>
+    <tr><td class="k">01/11 CN</td><td>nhận gói</td><td>điền tên vào <code>docs/hop-tuan.md</code></td></tr>
+    <tr><td class="k">14/11 T7</td><td><b>Cổng 1</b></td><td>G1 và module của mình</td></tr>
+    <tr><td class="k">21/11 T7</td><td><b>Cổng 2</b></td><td>G2, hazard, ngắt, timers</td></tr>
+    <tr><td class="k">05/12 T7</td><td><b>Cổng 3</b></td><td>tổng duyệt, báo cáo ghép xong</td></tr>
+    <tr><td class="k">S11</td><td>bảo vệ</td><td></td></tr>
+  </tbody>
+</table></div>
+
+<!-- ======================= 2. LUẬT HỌC ======================= -->
+<h2 id="s2"><span class="no">2</span>Luật học và 4 bài ở mỗi cổng</h2>
+<div class="easy"><span class="lb">Nói đơn giản</span>
+  <p><b>Cổng</b> là buổi kiểm tra nội bộ, như thi thử trước khi bảo vệ thật. Thầy có thể hỏi bất kỳ ai về bất kỳ dòng nào, nên mỗi người phải tự giải thích được gói của mình mà không cần nhìn tài liệu này.</p>
+</div>
+<p class="q">Nguồn: <code>KE-HOACH</code> §4b.</p>
+<p><b>Mỗi người học gói mình theo 5 bước:</b></p>
+<ol>
+  <li>Đọc spec của gói (spec = tài liệu mô tả khối phải làm gì, ghi ở mục (a) của mỗi người), rồi đọc code từ trên xuống.</li>
+  <li>Tự chạy test gói mình: mở Git Bash ở thư mục đồ án, gõ <code>source tools/env.sh</code> (nạp đường dẫn công cụ) rồi <code>bash tools/run_unit.sh &lt;tên&gt;</code>. Dòng cuối phải là PASS.</li>
+  <li><b>Cài 1 lỗi</b> vào code (đổi 1 dấu, 1 bit) rồi chạy lại: test phải FAIL. Nếu không FAIL thì đó là lỗ hổng test, báo nhóm. Nhớ trả code về như cũ.</li>
+  <li>Làm phần trình bày của mình (hình và đoạn báo cáo trong <code>report/latex/chuong/</code>).</li>
+  <li>Luyện 10 câu trong <code>docs/ngan-hang-cau-hoi.md</code> (mục của mình) và 14 câu chéo §6–8.</li>
+</ol>
+<p><b>Ở mỗi cổng, mỗi người qua đủ 4 bài</b> (người hỏi là thành viên khác):</p>
+<div class="tbl"><table>
+  <thead><tr><th>Bài</th><th>Đạt khi</th></tr></thead>
+  <tbody>
+    <tr><td class="k">Vấn đáp</td><td>≥ 8/10 câu gói mình và ≥ 3/5 câu chéo, <b>chỉ được dòng code</b> tương ứng</td></tr>
+    <tr><td class="k">Sửa tại chỗ 30 phút</td><td>bốc 1 bài ở ngân hàng §9, sửa xong test PASS</td></tr>
+    <tr><td class="k">Chạy lại test</td><td>trên máy người khác; giải thích 1 test FAIL do người hỏi cài</td></tr>
+    <tr><td class="k">Ứng dụng</td><td>giải thích 1 chức năng đồng hồ và 1 con số E1′–E4′: lấy từ đâu, đúng tới đâu</td></tr>
+  </tbody>
+</table></div>
+<p>Kết quả ghi <code>docs/hop-tuan.md</code>. Trượt thì tuần sau thi lại phần trượt.</p>
+
+<!-- ======================= 3. CHIA VIỆC ======================= -->
+<h2 id="s3"><span class="no">3</span>Bảng chia việc</h2>
+<div class="tbl"><table>
+  <thead><tr><th>TV</th><th>Gói</th><th>File chính</th><th>Hình</th><th>Đoạn báo cáo</th><th>Thí nghiệm / việc khác</th></tr></thead>
+  <tbody>
+    <tr><td class="k"><a href="#tv1">TV1</a></td><td>ALU &amp; số học</td><td><code>alu.v</code>, <code>muldiv.v</code>, <code>bcd_unit.v</code>, <code>tools/dse_report.py</code></td><td>H2 datapath G1</td><td>2.9, 3.4</td><td>trình bày H9 (DSE)</td></tr>
+    <tr><td class="k"><a href="#tv2">TV2</a></td><td>công cụ &amp; hazard</td><td><code>asm.py</code>, <code>iss.py</code>, <code>cmp_trace.py</code>, <code>hazard.v</code>, <code>fw/tests/hazard/</code>, <code>fw/main.s</code></td><td>H4 forwarding + hazard</td><td>2.1, 2.8, 2.10, 3.1</td><td>P4 bảng ĐẠT, P5 CPI, E3 (cùng TV3)</td></tr>
+    <tr><td class="k"><a href="#tv3">TV3</a></td><td>CPU &amp; chip</td><td><code>regfile.v</code>, <code>control.v</code>, <code>cpu_g1.v</code>, <code>cpu_pipe.v</code>, <code>soc_regs.v</code>, <code>irq_ctrl.v</code>, <code>soc_top.v</code>, <code>tb/system_tb.v</code></td><td>H1 SoC, H3 datapath G2, H8 waveform</td><td>2.2, 2.6, 2.7, 3.2</td><td>E3 (cùng TV2), P5</td></tr>
+    <tr><td class="k"><a href="#tv4">TV4</a></td><td>hiển thị &amp; âm thanh</td><td><code>char_rom.v</code>, <code>seg7_scan.v</code>, <code>display_ctrl.v</code>, <code>beeper.v</code>, <code>uart.v</code>, <code>vga_digits.v</code>, màn ảo</td><td>H6 MMIO, H7 hiển thị, H10</td><td>2.3, 2.5 (UART), 3.1 (màn ảo)</td><td>E4′ bóng ma</td></tr>
+    <tr><td class="k"><a href="#tv5">TV5</a></td><td>định thời ms</td><td><code>timebase.v</code>, <code>timers.v</code>, <code>buttons.v</code>, <code>rtc_bcd.v</code>, sync trong <code>main.s</code></td><td>H5 timebase + timers</td><td>2.4, 2.10 (sync)</td><td>E1′, E2′</td></tr>
+    <tr><td class="k">Long</td><td>biên tập + 1 gói tự chọn</td><td><code>report/latex/</code></td><td>—</td><td>Lời giới thiệu, ch.1, ch.4, PL A/B</td><td>P1, P6</td></tr>
+  </tbody>
+</table></div>
+
+<!-- ======================= 4. TỪNG NGƯỜI ======================= -->
+<h2 id="s4"><span class="no">4</span>Từng người: đã làm gì, chạy thế nào, dùng kiến thức nào</h2>
+<p>Mỗi phần có 6 mục: <b>(a)</b> file và spec · <b>(b)</b> đã làm gì · <b>(c)</b> hoạt động thế nào, kèm ví dụ từng bước · <b>(d)</b> kiến thức nền · <b>(e)</b> tự kiểm · <b>(f)</b> câu dễ bị hỏi, bấm vào để xem gợi ý trả lời.</p>
+<div class="tv-jump">
+  <a href="#tv1">TV1 ALU</a><a href="#tv2">TV2 Công cụ</a><a href="#tv3">TV3 CPU</a><a href="#tv4">TV4 Hiển thị</a><a href="#tv5">TV5 Định thời</a>
+</div>
+
+<!-- TV1 -->
+<section class="tv" id="tv1">
+<h3><span class="tag">TV1</span>ALU và khối số học</h3>
+<div class="easy"><span class="lb">Nói đơn giản</span>
+  <p>TV1 giữ "cái máy tính bỏ túi" bên trong CPU. ALU làm phép cộng, trừ, so sánh. <code>muldiv</code> làm phép nhân và chia. <code>bcd_unit</code> đổi số nhị phân thành từng chữ số thập phân để hiện lên màn đồng hồ, ví dụ 45 296 789 ms thành 8 chữ số "4 5 2 9 6 7 8 9".</p>
+</div>
+<h4>(a) File + spec</h4>
+<p><code>src/alu.v</code> (34 dòng), <code>src/muldiv.v</code> (78), <code>src/bcd_unit.v</code> (81), <code>tools/dse_report.py</code>. Spec: <code>isa-spec.md</code> §3–4, <code>control-table.md</code> §1.1.</p>
+<h4>(b) Đã làm gì</h4>
+<ul>
+  <li>ALU tổ hợp (không có thanh ghi, tính xong ngay trong chu kỳ): cộng, trừ, and, or, xor, <code>slt</code> có dấu, dịch <code>sll</code> (dịch trái) / <code>sra</code> (dịch phải giữ dấu). Test 4 200 vector.</li>
+  <li><code>muldiv</code>: <code>mul</code> tổ hợp (lấy 32 bit thấp của tích, HI/LO không đổi); <code>div</code> có dấu <b>32 chu kỳ</b> + 1 chu kỳ phát lệnh. Kết quả chia để ở 2 thanh ghi riêng: <b>LO</b> = thương, <b>HI</b> = số dư; lấy ra bằng <code>mflo</code>/<code>mfhi</code>. Test <code>mul.txt</code> 825 ca, <code>div.txt</code> 830 ca.</li>
+  <li><code>bcd_unit</code>: đổi số nhị phân ≤ 99 999 999 thành 8 chữ số BCD (A2). Có 2 bản chọn bằng tham số <code>G_COMB</code>: tuần tự (28 chu kỳ) và tổ hợp (1 chu kỳ, tốn mạch hơn). Test 112 537 ca.</li>
+  <li>DSE (Design Space Exploration, so sánh các phương án thiết kế): so 4 cách đổi ms → chữ số (<code>report/3.4-dse.md</code>).</li>
+</ul>
+<h4>(c) Hoạt động thế nào</h4>
+<p><b>1. Lệnh <code>slt</code> và bẫy tràn số.</b> <code>slt</code> (set less than) trả 1 nếu <code>a &lt; b</code>. Cách nghĩ đầu tiên: tính <code>a − b</code>, âm thì <code>a &lt; b</code>. Cách này sai khi phép trừ bị tràn (A2).</p>
+<div class="ex"><span class="lb">Ví dụ từng bước</span>
+  <p>a = <code>0x80000000</code> = −2 147 483 648 (âm nhất), b = <code>0x7FFFFFFF</code> = 2 147 483 647 (dương nhất). Rõ ràng a &lt; b, phải ra 1.</p>
+  <p>Tính a − b bằng mạch 32 bit: <code>0x80000000 − 0x7FFFFFFF = 0x00000001</code>. Bit dấu = 0, nghĩa là "không âm", tức kết luận a ≥ b. <b>Sai</b>, vì kết quả thật (−4 294 967 295) không vừa 32 bit.</p>
+  <p>Code đúng (<code>alu.v</code> dòng 16): <code>lt = (a[31] != b[31]) ? a[31] : diff[31]</code></p>
+  <ul>
+    <li><b>Khác dấu</b> (một âm một dương): số âm chắc chắn nhỏ hơn, nên <code>a &lt; b</code> đúng khi <code>a</code> âm, tức lấy <code>a[31]</code>. Ví dụ trên: <code>a[31]</code> = 1 → ra 1. Đúng.</li>
+    <li><b>Cùng dấu:</b> trừ 2 số cùng dấu không bao giờ tràn, nên tin được bit dấu của hiệu <code>diff[31]</code>.</li>
+  </ul>
+</div>
+<p><b>2. Chia restoring (chia khôi phục).</b> Giống chia tay ở cấp 1, nhưng trong hệ nhị phân nên mỗi bước thương chỉ là 0 hoặc 1: "chia được thì ghi 1, không chia được thì ghi 0". Mỗi chu kỳ làm 1 bước, 32 bit thì 32 chu kỳ.</p>
+<div class="ex"><span class="lb">Ví dụ từng bước: 7 ÷ 2 (dùng 3 bit cho ngắn)</span>
+  <p>Số bị chia 7 = <code>111</code>, số chia 2 = <code>10</code>. Số dư R bắt đầu = 0.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Bước</th><th>Kéo bit vào</th><th>R sau khi dịch</th><th>Thử R − 2</th><th>Bit thương</th><th>R giữ lại</th></tr></thead>
+    <tbody>
+      <tr><td class="m">1</td><td class="m">1</td><td class="m">1</td><td class="m">−1 (âm)</td><td class="m">0</td><td class="m">1 (khôi phục)</td></tr>
+      <tr><td class="m">2</td><td class="m">1</td><td class="m">3</td><td class="m">1</td><td class="m">1</td><td class="m">1</td></tr>
+      <tr><td class="m">3</td><td class="m">1</td><td class="m">3</td><td class="m">1</td><td class="m">1</td><td class="m">1</td></tr>
+    </tbody>
+  </table></div>
+  <p>Thương = <code>011</code> = 3, dư = 1. Đúng: 7 = 2 × 3 + 1. "Khôi phục" nghĩa là thử trừ ra âm thì bỏ kết quả trừ, giữ R cũ.</p>
+  <p><b>Số âm:</b> mạch chia trị tuyệt đối trước, rồi sửa dấu: thương âm nếu 2 dấu khác nhau; số dư cùng dấu với số bị chia. Vậy −7 ÷ 2 → thương −3 (LO), dư −1 (HI). Kiểm: 2 × (−3) + (−1) = −7.</p>
+</div>
+<ul>
+  <li>Ca đặc biệt nhóm tự định nghĩa (<code>isa-spec</code> §4): chia cho 0 → LO = 0, HI = số bị chia, cờ <code>DZ = 1</code>; <code>0x80000000 / −1</code> (kết quả thật +2 147 483 648 không vừa 32 bit) → LO = <code>0x80000000</code>, HI = 0.</li>
+  <li>Toán hạng <b>chốt ở chu kỳ start</b>: ngay khi phát lệnh, bộ chia chép a, b vào thanh ghi riêng. Lệnh sau có đổi <code>$t0</code> thì phép chia cũng không bị ảnh hưởng.</li>
+  <li>Trong lúc bộ chia bận (<code>busy</code> = 1) thì CPU đứng (G1 giữ nguyên PC, G2 đóng băng cả dây chuyền), nên <code>mflo</code> ngay sau <code>div</code> luôn lấy được kết quả đúng.</li>
+</ul>
+<p><b>3. Double dabble (dịch rồi cộng 3).</b> Muốn đổi nhị phân sang BCD: dịch từng bit của số nhị phân sang trái, đưa dần vào vùng BCD. Mỗi lần dịch trái là nhân 2. Vấn đề: một chữ số BCD ≥ 5 khi nhân 2 sẽ ≥ 10, phải "nhớ" sang chữ số bên trái, nhưng nhị phân thường chỉ nhớ khi ≥ 16. Mẹo: <b>trước khi dịch, chữ số nào ≥ 5 thì cộng 3</b>. Cộng 3 rồi nhân 2 là cộng thêm 6, đúng bằng khoảng cách 16 − 10, nên phép nhớ nhị phân tự thành phép nhớ thập phân.</p>
+<div class="ex"><span class="lb">Ví dụ từng bước: đổi 13 (<code>1101</code>) sang BCD</span>
+  <div class="tbl"><table>
+    <thead><tr><th>Bước</th><th>Kiểm trước khi dịch</th><th class="m">Chục</th><th class="m">Đơn vị</th><th class="m">Bit còn lại</th></tr></thead>
+    <tbody>
+      <tr><td>Bắt đầu</td><td></td><td class="m">0000</td><td class="m">0000</td><td class="m">1101</td></tr>
+      <tr><td>Dịch 1</td><td>đơn vị = 0, không cộng</td><td class="m">0000</td><td class="m">0001</td><td class="m">101</td></tr>
+      <tr><td>Dịch 2</td><td>đơn vị = 1, không cộng</td><td class="m">0000</td><td class="m">0011</td><td class="m">01</td></tr>
+      <tr><td>Dịch 3</td><td>đơn vị = 3, không cộng</td><td class="m">0000</td><td class="m">0110</td><td class="m">1</td></tr>
+      <tr><td>Cộng 3</td><td>đơn vị = 6 ≥ 5 → 6 + 3 = 9</td><td class="m">0000</td><td class="m">1001</td><td class="m">1</td></tr>
+      <tr><td>Dịch 4</td><td></td><td class="m">0001</td><td class="m">0011</td><td class="m"></td></tr>
+    </tbody>
+  </table></div>
+  <p>Kết quả: chục = 1, đơn vị = 3 → "13". Nếu không cộng 3 ở bước đó, dịch <code>0110 1</code> sẽ ra đơn vị <code>1101</code> = 13, không phải chữ số hợp lệ.</p>
+</div>
+<ul>
+  <li>Bản tuần tự làm 1 bước mỗi chu kỳ (28 chu kỳ cho 8 chữ số). Bản tổ hợp trải hết các bước thành mạch nối tiếp nhau, xong trong 1 chu kỳ nhưng tốn thêm <b>416 LUT</b> (LUT = ô logic cơ bản của FPGA, dùng để đo kích thước mạch).</li>
+</ul>
+<p><b>4. DSE: đổi ms → chữ số bằng cách nào rẻ nhất.</b></p>
+<div class="tbl"><table>
+  <thead><tr><th>Cách</th><th>Chu kỳ CPU mỗi lần</th></tr></thead>
+  <tbody>
+    <tr><td>Firmware dùng lệnh <code>div</code> chia 10 liên tục</td><td class="m">224</td></tr>
+    <tr><td>Lệnh <code>bcd</code> bản tuần tự</td><td class="m">162</td></tr>
+    <tr><td>Lệnh <code>bcd</code> bản tổ hợp</td><td class="m">135</td></tr>
+    <tr><td>Bộ đếm BCD bằng phần cứng (đếm thẳng dạng chữ số)</td><td class="m">24</td></tr>
+  </tbody>
+</table></div>
+<p>Ở xung thường, cách nào cũng chiếm &lt; 1 % thời gian CPU, nên chọn cách nào cũng được. Khác biệt chỉ lộ ra khi CPU chạy rất chậm (32,77 kHz, kiểu đồng hồ tiết kiệm pin). Đây là kết luận "có phạm vi": nói "bộ đếm phần cứng tốt hơn" là thiếu, phải nói "tốt hơn khi xung thấp".</p>
+<h4>(d) Kiến thức nền</h4>
+<ul>
+  <li>Biểu diễn bù 2, tràn có dấu (P&amp;H 2.4, 3.2).</li>
+  <li>Nhân và chia phần cứng, thuật toán restoring (P&amp;H 3.3, 3.4).</li>
+  <li>BCD, thuật toán double dabble (shift-and-add-3).</li>
+  <li>Mạch tổ hợp và tuần tự, đánh đổi diện tích và thời gian (bản <code>bcd</code> tổ hợp và tuần tự).</li>
+  <li>Tổng hợp logic: LUT, FF, đọc báo cáo Yosys (phần mềm biến Verilog thành mạch và đếm số ô dùng).</li>
+</ul>
+<h4>(e) Tự kiểm</h4>
+<pre><code>source tools/env.sh
+bash tools/run_unit.sh alu muldiv bcd</code></pre>
+<p>Gợi ý cài lỗi: đổi dòng <code>lt</code> thành <code>lt = diff[31]</code> (ví dụ <code>0x80000000</code> ở trên sẽ làm test FAIL); đổi điều kiện cộng 3 từ <code>&gt;= 5</code> thành <code>&gt; 5</code> (số có chữ số 5 sẽ sai).</p>
+<h4>(f) Câu dễ bị hỏi</h4>
+<details class="qa"><summary>Vì sao <code>slt</code> không dùng bit dấu của hiệu?</summary><div><p>Vì phép trừ có thể tràn khi a, b khác dấu. Ví dụ <code>0x80000000 − 0x7FFFFFFF</code> ra 1 (dương) dù a &lt; b. Khác dấu thì lấy dấu của a; cùng dấu thì trừ không tràn nên dùng dấu của hiệu (<code>alu.v:16</code>).</p></div></details>
+<details class="qa"><summary><code>div</code> mất đúng bao nhiêu chu kỳ, đo bằng gì?</summary><div><p>32 chu kỳ tính (mỗi chu kỳ 1 bit thương) + 1 chu kỳ phát lệnh. Đo bằng testbench đếm số chu kỳ <code>busy</code> = 1, và bằng bộ đếm chu kỳ khi chạy firmware.</p></div></details>
+<details class="qa"><summary><code>−7 / 2</code> ra gì?</summary><div><p>LO = −3, HI = −1. Thương làm tròn về phía 0; dư cùng dấu số bị chia. Kiểm: 2 × (−3) + (−1) = −7.</p></div></details>
+<details class="qa"><summary>Double dabble tại sao cộng 3?</summary><div><p>Chữ số ≥ 5 nhân 2 thành ≥ 10, phải nhớ sang chữ số kế. Cộng 3 trước khi nhân 2 là cộng 6 sau khi nhân, bù đúng khoảng 16 − 10 = 6, nên chỗ nhớ nhị phân (ở 16) trùng chỗ nhớ thập phân (ở 10).</p></div></details>
+<details class="qa"><summary>Khi nào nên chọn <code>bcd</code> tổ hợp?</summary><div><p>Khi cần nhanh (1 chu kỳ thay vì 28) và còn dư diện tích chip (+416 LUT). Ở xung thường đồng hồ không cần, vì đổi chữ số chiếm &lt; 1 % CPU; chỉ đáng khi xung rất thấp.</p></div></details>
+<p class="q">Thêm: ngân hàng câu hỏi §1.</p>
+</section>
+
+<!-- TV2 -->
+<section class="tv" id="tv2">
+<h3><span class="tag">TV2</span>Công cụ, hazard, firmware</h3>
+<div class="easy"><span class="lb">Nói đơn giản</span>
+  <p>TV2 giữ 3 thứ: <b>bộ dịch</b> biến chương trình chữ thành mã máy; <b>"giám khảo"</b> chấm xem CPU chạy có đúng từng lệnh không; và <b>người điều phối dây chuyền</b> của G2, quyết định khi nào chuyển tắt dữ liệu, khi nào bắt chờ, khi nào bỏ lệnh lấy nhầm (A7). TV2 cũng giữ firmware chính.</p>
+</div>
+<h4>(a) File + spec</h4>
+<p><code>tools/asm.py</code> (404 dòng), <code>tools/iss.py</code> (468), <code>tools/cmp_trace.py</code>, <code>tools/cosim_iss.py</code>, <code>tools/cosim_mars.py</code>, <code>src/hazard.v</code> (42), <code>fw/tests/hazard/*.s</code> (9 file), <code>fw/main.s</code> (1 230), <code>tools/cpi.py</code>. Spec: <code>isa-spec.md</code> §7–8, <code>pipeline-policy.md</code> (cả file).</p>
+<h4>(b) Đã làm gì</h4>
+<ul>
+  <li><b>Assembler 2 lượt</b> <code>asm.py</code>. Vì sao 2 lượt: lệnh <code>beq $t0, $t1, xong</code> có thể nhảy tới nhãn <code>xong</code> nằm <b>phía dưới</b>, lúc đọc tới chưa biết địa chỉ. Lượt 1 chỉ đếm để biết mọi nhãn ở địa chỉ nào; lượt 2 mới mã hóa từng lệnh. Ra <code>.hex</code> (nạp vào IMEM) và <code>.lst</code> (bảng địa chỉ ↔ dòng nguồn, để tra khi gỡ lỗi); lỗi báo kèm số dòng.</li>
+  <li><b>ISS</b> (Instruction Set Simulator, mô phỏng mức lệnh) <code>iss.py</code>: chạy từng lệnh bằng Python theo đúng <code>isa-spec</code>, có MMIO giả và ngắt. Không quan tâm mạch bên trong, chỉ quan tâm "sau mỗi lệnh, thanh ghi và bộ nhớ phải thế nào". Đây là <b>mô hình tham chiếu (golden model)</b>.</li>
+  <li><b>Co-simulation</b>: chip Verilog và ISS chạy cùng một chương trình, mỗi lệnh in 1 dòng <b>trace</b> (PC, thanh ghi được ghi, giá trị ghi, ô nhớ được ghi). <code>cmp_trace.py</code> so 2 file trace từng dòng; lệch ở dòng nào báo đúng dòng đó, nên biết ngay lệnh nào sai. Đối chiếu thêm với <b>MARS</b> (19 chương trình) để chống trường hợp "ISS và chip cùng hiểu sai một lệnh".</li>
+  <li><code>hazard.v</code>: khối forwarding và phát hiện load-use cho G2. Có 9 chương trình "tra tấn hazard" viết riêng để tạo đủ mọi tình huống xung đột.</li>
+  <li><code>cpi.py</code>: đọc trace và đếm mỗi chu kỳ bị mất là do nguyên nhân gì.</li>
+</ul>
+<h4>(c) Hoạt động thế nào</h4>
+<p class="q">Mỗi loại hazard được trình bày theo 5 bước: định nghĩa → điều kiện → khối xử lý → dòng code → bảng chu kỳ (<code>pipeline-policy.md</code> §3–7).</p>
+<p><b>1. Forwarding (xử lý xung đột RAW: Read After Write, đọc sau khi ghi).</b></p>
+<div class="ex"><span class="lb">Ví dụ từng bước</span>
+<pre><code>add $t0, $t1, $t2    # lệnh 1: ghi $t0
+sub $t3, $t0, $t4    # lệnh 2: đọc $t0 ngay</code></pre>
+  <div class="tbl"><table>
+    <thead><tr><th>Lệnh</th><th class="m">1</th><th class="m">2</th><th class="m">3</th><th class="m">4</th><th class="m">5</th><th class="m">6</th></tr></thead>
+    <tbody>
+      <tr><td><code>add</code></td><td class="m">IF</td><td class="m">ID</td><td class="m">EX</td><td class="m"><b>MEM</b></td><td class="m">WB</td><td></td></tr>
+      <tr><td><code>sub</code></td><td></td><td class="m">IF</td><td class="m">ID</td><td class="m"><b>EX</b></td><td class="m">MEM</td><td class="m">WB</td></tr>
+    </tbody>
+  </table></div>
+  <p><code>add</code> tới chu kỳ 5 mới ghi <code>$t0</code> vào regfile. Nhưng <code>sub</code> cần <code>$t0</code> ở chu kỳ 4 (tầng EX). May là ở chu kỳ 4, kết quả của <code>add</code> đã tính xong và đang nằm ở thanh ghi tầng EX/MEM. Forwarding nối dây đưa thẳng giá trị đó vào ALU cho <code>sub</code>: không mất chu kỳ nào.</p>
+</div>
+<pre><code>ForwardA = 10 nếu EX/MEM.reg_write và EX/MEM.dst ≠ 0 và EX/MEM.dst = ID/EX.rs
+           01 ngược lại nếu MEM/WB.reg_write và MEM/WB.dst ≠ 0 và MEM/WB.dst = ID/EX.rs
+           00 ngược lại</code></pre>
+<ul>
+  <li>Đọc công thức: <code>ForwardA</code> chọn nguồn cho đầu vào A của ALU. <code>10</code> = lấy từ EX/MEM (lệnh ngay trước), <code>01</code> = lấy từ MEM/WB (lệnh trước nữa), <code>00</code> = lấy từ regfile như bình thường. <code>rs</code> là thanh ghi nguồn thứ nhất; <code>dst</code> là thanh ghi đích; <code>reg_write</code> = lệnh đó có ghi thanh ghi.</li>
+  <li><b>Ưu tiên EX/MEM</b> vì nếu cả 2 lệnh trước đều ghi <code>$t0</code>, giá trị của lệnh gần nhất mới là giá trị đúng.</li>
+  <li><b>Điều kiện <code>dst ≠ 0</code></b> vì <code>$zero</code> luôn bằng 0: lệnh nào "ghi" vào <code>$zero</code> thì cũng không được chuyển tắt giá trị đó.</li>
+</ul>
+<p><b>2. Load-use: trường hợp phải chờ.</b></p>
+<div class="ex"><span class="lb">Ví dụ từng bước</span>
+<pre><code>lw  $t0, 0($s0)      # đọc bộ nhớ vào $t0
+add $t1, $t0, $t2    # dùng $t0 ngay</code></pre>
+  <div class="tbl"><table>
+    <thead><tr><th>Lệnh</th><th class="m">1</th><th class="m">2</th><th class="m">3</th><th class="m">4</th><th class="m">5</th><th class="m">6</th><th class="m">7</th></tr></thead>
+    <tbody>
+      <tr><td><code>lw</code></td><td class="m">IF</td><td class="m">ID</td><td class="m">EX</td><td class="m"><b>MEM</b></td><td class="m">WB</td><td></td><td></td></tr>
+      <tr><td><code>add</code></td><td></td><td class="m">IF</td><td class="m">ID</td><td class="m">ID <span class="q">(chờ)</span></td><td class="m"><b>EX</b></td><td class="m">MEM</td><td class="m">WB</td></tr>
+    </tbody>
+  </table></div>
+  <p>Dữ liệu của <code>lw</code> tới <b>cuối</b> chu kỳ 4 mới đọc xong từ bộ nhớ, trong khi <code>add</code> cần nó ngay <b>đầu</b> chu kỳ 4. Không chuyển tắt kịp, nên <code>add</code> phải đứng ở ID thêm 1 chu kỳ (chèn 1 bong bóng). Sang chu kỳ 5, dữ liệu nằm ở MEM/WB và được forward vào EX của <code>add</code>.</p>
+</div>
+<ul>
+  <li>Phát hiện ở tầng ID. Chỉ xét những toán hạng lệnh <b>thật sự đọc</b> (tín hiệu <code>uses_rs</code>, <code>uses_rt</code>), để khỏi chờ oan. Ví dụ <code>addiu $t1, $t0, 5</code> chỉ đọc <code>rs</code>; trường <code>rt</code> của nó là thanh ghi đích, không phải nguồn.</li>
+</ul>
+<p><b>3. Nhánh quyết định ở EX.</b> Khi <code>beq</code> tới EX mới so sánh xong. Lúc đó 2 lệnh phía sau đã được lấy vào IF và ID. Nếu nhảy thật, 2 lệnh này bị xóa: <b>phạt 2 chu kỳ</b>. Nếu không nhảy thì không mất gì.</p>
+<ul>
+  <li><b>Vì sao chọn EX</b> (Nhóm 3 khóa trước chọn ID): so sánh ở EX dùng lại được ALU và forwarding sẵn có. Nếu so ở ID thì phải thêm bộ so sánh và thêm đường forwarding riêng vào ID, nhiều ca đặc biệt hơn. Đổi lại mỗi lần nhảy mất thêm 1 chu kỳ (bảng T3/T4, <code>pipeline-policy.md</code> §7).</li>
+  <li><b>Ưu tiên khi nhiều chuyện xảy ra cùng lúc:</b> <code>busy</code> (chờ bộ chia) &gt; flush (xóa lệnh nhầm) &gt; load-use (chờ dữ liệu) &gt; bình thường.</li>
+</ul>
+<p><b>4. CPI của firmware thật</b> (<code>report/3.3-cpi.md</code>): G1 <span class="big">1,428</span> · G2 <span class="big">2,027</span>. Chu kỳ của G2 được dùng vào:</p>
+<div class="tbl"><table>
+  <thead><tr><th>Nguyên nhân</th><th>Tỉ lệ chu kỳ</th></tr></thead>
+  <tbody>
+    <tr><td>chạy lệnh thật</td><td class="m">49,3 %</td></tr>
+    <tr><td>phạt nhánh (flush)</td><td class="m">22,9 %</td></tr>
+    <tr><td>chờ <code>div</code>/<code>bcd</code> (<code>busy</code>)</td><td class="m">22,8 %</td></tr>
+    <tr><td>chờ load-use</td><td class="m">4,9 %</td></tr>
+    <tr><td>không giải thích được</td><td class="m">0</td></tr>
+  </tbody>
+</table></div>
+<div class="ex"><span class="lb">Ví dụ: vì sao CPI cao hơn mà G2 vẫn nhanh hơn</span>
+  <p>Thời gian trung bình mỗi lệnh = CPI / tần số.</p>
+  <p>G1: 1,428 / 25 MHz = 57,1 ns. G2: 2,027 / 50 MHz = 40,5 ns. Vậy G2 nhanh hơn khoảng 1,4 lần dù CPI lớn hơn. <span class="tag c">inference</span> phép chia này tính từ 2 số CPI ở trên, chưa đo trực tiếp.</p>
+</div>
+<p><b>5. Firmware.</b> Vòng chính lặp mãi 4 việc: <code>events</code> (xử lý nút bấm, sự kiện) → <code>ringchk</code> (kiểm báo thức) → <code>sync</code> (xử lý câu đồng bộ giờ từ PC) → <code>draw</code> (vẽ lên màn). Ngắt chỉ dùng cho UART_RX (có byte mới từ PC). Handler ở <code>0x180</code> gom byte vào bộ đệm và <b>chụp giờ ngay lúc nhận ký tự xuống dòng <code>\n</code></b> (hết một câu). Từ 27/10 có <b>bộ đệm đôi</b>: 2 bộ đệm luân phiên, câu sau được nhận vào bộ đệm này trong khi câu trước vẫn nằm ở bộ đệm kia chờ xử lý, nên 2 câu sát nhau không đè lên nhau.</p>
+<h4>(d) Kiến thức nền</h4>
+<ul>
+  <li>Mã hóa lệnh MIPS R/I/J, assembler 2 lượt, lệnh giả (P&amp;H 2.5, 2.12, A.2).</li>
+  <li>Pipeline 5 tầng, thanh ghi tầng (P&amp;H 4.5, 4.6).</li>
+  <li>Data hazard, forwarding, stall (P&amp;H 4.7); control hazard, flush, dự đoán không nhảy (P&amp;H 4.8).</li>
+  <li>CPI, phân tích hiệu năng (P&amp;H 1.6).</li>
+  <li>Kiểm thử: golden model, co-simulation, <b>mutation testing</b> (A10).</li>
+</ul>
+<h4>(e) Tự kiểm</h4>
+<pre><code>pytest tools/                          # test của assembler, ISS...
+python tools/cosim_iss.py --rand 0     # so G1 với ISS
+python tools/cosim_iss.py --g2 --rand 0  # so G2 với ISS
+bash tools/run_unit.sh hazard          # 9 chương trình tra tấn hazard</code></pre>
+<p>Gợi ý cài lỗi: bỏ điều kiện <code>dst ≠ 0</code> trong forwarding rồi chạy <code>zero_reg.s</code>; đổi thứ tự ưu tiên 10/01.</p>
+<h4>(f) Câu dễ bị hỏi</h4>
+<details class="qa"><summary>Vẽ bảng chu kỳ <code>lw</code> + <code>add</code> phụ thuộc.</summary><div><p>Xem bảng load-use ở trên: <code>add</code> đứng ở ID 2 chu kỳ (3 và 4), sang EX ở chu kỳ 5 và nhận dữ liệu forward từ MEM/WB.</p></div></details>
+<details class="qa"><summary>Tại sao không forward từ EX/MEM khi lệnh đó là <code>lw</code>?</summary><div><p>Khi <code>lw</code> ở EX/MEM, giá trị trong đó mới là <b>địa chỉ</b> tính bởi ALU, dữ liệu bộ nhớ chưa đọc xong. Forward lúc đó là đưa nhầm địa chỉ. Vì thế mới cần stall 1 chu kỳ.</p></div></details>
+<details class="qa"><summary>Vì sao nhánh ở EX?</summary><div><p>Dùng lại ALU và forwarding có sẵn, ít ca đặc biệt, dễ kiểm. Cái giá: phạt 2 chu kỳ mỗi lần nhảy thay vì 1 (nếu quyết ở ID). Số đo thật: phạt nhánh chiếm 22,9 % chu kỳ G2.</p></div></details>
+<details class="qa"><summary>ISS sai thì co-sim có bắt được không?</summary><div><p>Không, nếu chip cũng sai giống hệt (vì chỉ so 2 bên với nhau). Nên mới có MARS làm bên thứ 3 độc lập.</p></div></details>
+<details class="qa"><summary>CPI 2,027 lớn hơn G1 mà G2 vẫn nhanh hơn, vì sao?</summary><div><p>Thời gian = số lệnh × CPI / tần số. G2 chạy 50 MHz, gấp đôi G1 (25 MHz): 2,027/50 &lt; 1,428/25.</p></div></details>
+<p class="q">Thêm: ngân hàng câu hỏi §2.</p>
+</section>
+
+<!-- TV3 -->
+<section class="tv" id="tv3">
+<h3><span class="tag">TV3</span>CPU và con chip</h3>
+<div class="easy"><span class="lb">Nói đơn giản</span>
+  <p>TV3 giữ chính "bộ não": 2 bản CPU G1 và G2, khối điều khiển, tệp thanh ghi, cách CPU nhận ngắt, và file <code>soc_top.v</code> nối mọi khối lại thành một con chip. TV3 cũng giữ bài test lớn nhất: chạy firmware thật trên cả con chip và kiểm 589 điểm.</p>
+</div>
+<h4>(a) File + spec</h4>
+<p><code>src/regfile.v</code>, <code>src/control.v</code> (106), <code>src/cpu_g1.v</code> (233), <code>src/cpu_pipe.v</code> (308), <code>src/soc_regs.v</code>, <code>src/irq_ctrl.v</code>, <code>src/soc_top.v</code> (130), <code>tb/system_tb.v</code>. Spec: <code>control-table.md</code>, <code>mmio-map.md</code>, <code>isa-spec.md</code> §5, <code>pipeline-policy.md</code> §1, §10.</p>
+<h4>(b) Đã làm gì</h4>
+<ul>
+  <li>Regfile 32 × 32 bit: ghi ở sườn lên, đọc tổ hợp, có <b>bypass nội bộ</b>: nếu cùng chu kỳ vừa ghi vừa đọc đúng thanh ghi đó, thì đầu đọc trả luôn giá trị mới đang được ghi.</li>
+  <li><code>control.v</code>: bảng chân lý cho cả 28 lệnh (<code>control-table.md</code>).</li>
+  <li><b>G1 đơn chu kỳ "2 pha"</b>, CP0 (Status, Cause, EPC) và nhận ngắt.</li>
+  <li><b>G2 pipeline 5 tầng</b>, có ngắt chính xác (A9).</li>
+  <li><code>soc_top</code>: nối CPU, bus, mọi ngoại vi; <code>irq_ctrl</code> gom 8 nguồn ngắt.</li>
+  <li><code>system_tb</code>: chạy firmware thật trên chip, 7 kịch bản (bấm nút, đồng bộ giờ, báo thức...), 589 kiểm.</li>
+</ul>
+<h4>(c) Hoạt động thế nào</h4>
+<p><b>1. Vì sao G1 cần "2 pha".</b></p>
+<div class="easy"><span class="lb">Nói đơn giản</span>
+  <p>Bộ nhớ trên FPGA (BRAM) giống quầy gửi đồ: đưa số thẻ ở nhịp này, nhịp sau mới nhận được đồ. CPU đơn chu kỳ lại cần cả "lấy lệnh" lẫn "đọc dữ liệu" xong trong cùng 1 chu kỳ. Cách giải: mỗi chu kỳ CPU dùng <b>2 nhịp</b> của clock 50 MHz, gọi là pha A và pha B. Vì thế G1 chạy 25 MHz.</p>
+</div>
+<ul>
+  <li><b>Pha A:</b> cập nhật PC và regfile; cùng lúc IMEM nhận địa chỉ <code>next_pc</code> (lệnh kế tiếp), nên ngay sau pha A, đầu ra IMEM chính là lệnh của chu kỳ mới.</li>
+  <li>Từ A sang B: giải mã, đọc regfile, ALU tính (mạch tổ hợp, không cần nhịp).</li>
+  <li><b>Pha B:</b> DMEM và MMIO nhận địa chỉ (<code>sw</code> ghi vào, <code>lw</code> bắt đầu đọc).</li>
+  <li>Từ B sang A: dữ liệu <code>lw</code> đã về tới cổng ghi regfile; tính xong <code>next_pc</code>.</li>
+  <li>Kết quả: mỗi lệnh 1 chu kỳ CPU (CPI = 1 khi không có <code>div</code>/<code>bcd</code>). Nguồn: <code>mmio-map.md</code> §1.1.</li>
+</ul>
+<p><b>2. Nhận ngắt ở G1.</b> Điều kiện: <code>irq = 1</code> (có ngoại vi gọi), <code>IE = 1</code> (đang cho phép ngắt), <code>EXL = 0</code> (chưa ở trong handler), lệnh vừa xong không phải <code>mtc0</code>/<code>eret</code>, CPU không <code>busy</code>. Khi đủ điều kiện:</p>
+<pre><code>EPC ← next_pc     # địa chỉ lệnh kế tiếp, chưa chạy
+PC  ← 0x180       # nhảy tới handler
+EXL ← 1           # đánh dấu "đang trong handler", chặn ngắt lồng</code></pre>
+<p>Nhận ở <b>cuối lệnh</b>, nên không phải hủy lệnh nào. Điều này quan trọng vì đọc một số thanh ghi ngoại vi có "tác dụng phụ" (ví dụ lấy 1 byte ra khỏi hàng đợi UART); nếu hủy rồi chạy lại lệnh đọc đó thì mất 1 byte.</p>
+<p><b>3. Ngắt ở G2</b> (chính xác, <code>pipeline-policy.md</code> §10). Khó hơn vì có 5 lệnh đang chạy dở cùng lúc.</p>
+<ul>
+  <li>Nhận ở ranh giới ID/EX. 2 lệnh đã qua (đang ở EX/MEM và MEM/WB) được <b>chạy nốt</b>. 2 lệnh phía sau (ở IF/ID và ID/EX) bị <b>hủy</b>, không ghi gì.</li>
+  <li><code>EPC</code> = PC của lệnh cũ nhất chưa hoàn thành (chưa "retire"). Sau handler, CPU quay về chạy lại từ lệnh đó.</li>
+  <li>Không nhận khi đang <code>busy</code>, đang stall load-use, hoặc vừa có lệnh CP0.</li>
+  <li>Ngắt đến đúng lúc <code>beq</code> nhảy thì <code>EPC</code> = đích nhánh (lệnh sẽ chạy tiếp theo là lệnh ở đích).</li>
+</ul>
+<p><b>4. Thanh ghi tầng G2:</b> IF/ID 65 bit, ID/EX 194, EX/MEM 73, MEM/WB 71 (<code>pipeline-policy.md</code> §1). Ví dụ IF/ID cần giữ lệnh (32 bit) + PC + 4 (32 bit) + 1 bit hợp lệ = 65. <span class="tag c">inference</span> cách chia 65 bit này suy từ tên trường, cần đối chiếu <code>cpu_pipe.v</code>. Báo cáo phải có bảng trường và độ rộng.</p>
+<p><b>5. Bus/MMIO:</b> xem A8. Ví dụ <code>MS_OF_DAY</code> ở địa chỉ −252 (<code>0xFFFFFF04</code>).</p>
+<p><b>6. <code>irq_ctrl</code>:</b></p>
+<ul>
+  <li><code>IRQ_PENDING</code>: mỗi bit ứng với 1 nguồn ngắt, tự bật lên khi có sự kiện. Firmware <b>ghi 1 vào bit đó để xóa</b> sau khi xử lý xong ("write-1-to-clear").</li>
+  <li>Nếu sự kiện mới đến đúng chu kỳ firmware đang xóa, thì <b>sự kiện thắng</b>: bit vẫn bật, không mất ngắt.</li>
+  <li><code>IRQ_ENABLE</code>: bật/tắt từng nguồn. Tín hiệu báo CPU: <code>irq</code> = OR của mọi bit (<code>PENDING &amp; ENABLE</code>).</li>
+</ul>
+<h4>(d) Kiến thức nền</h4>
+<ul>
+  <li>Datapath và control đơn chu kỳ (P&amp;H 4.3, 4.4); bảng chân lý điều khiển.</li>
+  <li>Pipeline và thanh ghi tầng (P&amp;H 4.6); ngoại lệ/ngắt, EPC, Cause (P&amp;H 4.9; MIPS32 Vol III về CP0).</li>
+  <li>Bộ nhớ đồng bộ (BRAM), clock enable thay vì tạo clock mới (A3).</li>
+  <li>I/O ánh xạ bộ nhớ (MMIO), polling và ngắt (P&amp;H phụ lục A.7, A.8).</li>
+  <li>Ngắt mức (level: tín hiệu giữ 1 cho tới khi được xóa) và ngắt cạnh (edge: chỉ là 1 xung ngắn).</li>
+</ul>
+<h4>(e) Tự kiểm</h4>
+<pre><code>bash tools/run_unit.sh regfile control cpu_g1 cpu_pipe irq system</code></pre>
+<p>Gợi ý cài lỗi: tắt bypass regfile; cho nhận ngắt ngay sau <code>mtc0</code>; đổi <code>EPC ← pc</code> thay vì <code>next_pc</code> (handler xong sẽ chạy lại lệnh cũ một lần nữa).</p>
+<h4>(f) Câu dễ bị hỏi</h4>
+<details class="qa"><summary>Vì sao IMEM phải chốt <code>next_pc</code> chứ không phải <code>PC</code>?</summary><div><p>BRAM trả dữ liệu sau 1 nhịp. Nếu đưa <code>PC</code> hiện tại thì lệnh về trễ 1 nhịp, sai chu kỳ. Đưa trước <code>next_pc</code> ở pha A thì đầu chu kỳ mới đã có đúng lệnh.</p></div></details>
+<details class="qa"><summary>Ngắt đến đúng lúc <code>div</code> đang chạy thì sao?</summary><div><p>Chờ hết <code>busy</code> rồi mới nhận; <code>EPC</code> = lệnh sau <code>div</code>. Không cắt ngang phép chia.</p></div></details>
+<details class="qa"><summary>Vì sao chặn ngắt ngay sau <code>mtc0</code>/<code>eret</code>?</summary><div><p>Hai lệnh này đổi chính trạng thái ngắt (Status, EPC). Nhận ngắt ngay lúc đó dễ dùng giá trị nửa cũ nửa mới, ví dụ ghi đè EPC trước khi <code>eret</code> kịp dùng.</p></div></details>
+<details class="qa"><summary>Handler quên xóa <code>IRQ_PENDING</code> thì chuyện gì xảy ra?</summary><div><p>Bit vẫn bật nên <code>irq</code> vẫn 1. Vừa <code>eret</code> ra là CPU lại bị ngắt ngay, chạy handler mãi, chương trình chính đứng hình.</p></div></details>
+<details class="qa"><summary>Vẽ datapath G1 trong 5 phút.</summary><div><p>Bắt đầu từ hình ở A4: PC → IMEM → control + regfile → ALU → DMEM → mux ghi về regfile; thêm bộ cộng PC + 4 và mux chọn địa chỉ nhảy. Tập vẽ đến khi không cần nhìn.</p></div></details>
+<p class="q">Thêm: ngân hàng câu hỏi §3.</p>
+</section>
+
+<!-- TV4 -->
+<section class="tv" id="tv4">
+<h3><span class="tag">TV4</span>Hiển thị, âm thanh, UART</h3>
+<div class="easy"><span class="lb">Nói đơn giản</span>
+  <p>TV4 giữ mọi thứ người dùng <b>nhìn và nghe</b>: 8 chữ số LED, màn hình VGA, tiếng còi, và cổng nối tiếp UART để chip nói chuyện với máy tính. Thêm một "màn hình ảo" để test kiểm đúng cái mắt người sẽ thấy.</p>
+</div>
+<h4>(a) File + spec</h4>
+<p><code>src/char_rom.v</code>, <code>src/seg7_scan.v</code> (86), <code>src/display_ctrl.v</code>, <code>src/beeper.v</code>, <code>src/uart.v</code> (124), <code>src/vga_digits.v</code> (97), <code>tb/screen_dump.v</code> + <code>tools/screen.py</code>. Spec: <code>display-spec.md</code>.</p>
+<h4>(b) Đã làm gì</h4>
+<ul>
+  <li><b>LED 7 đoạn:</b> mỗi chữ số gồm 7 vạch sáng (gọi a đến g); bật tổ hợp vạch khác nhau thì ra chữ số khác nhau, ví dụ bật đủ 7 vạch ra số 8. ROM ký tự chứa 32 mã → mẫu 7 vạch; mã 0x0–0xF trùng chữ số hex, nên kết quả lệnh <code>bcd</code> ghi thẳng vào màn được.</li>
+  <li>Quét 8 chữ số có <b>khoảng tắt chống bóng ma</b>, PWM độ sáng 16 mức, nháy 2 Hz (cho chữ số đang chỉnh).</li>
+  <li>VGA 640 × 480 kiểu "đuổi tia": không có frame buffer (bộ nhớ chứa cả khung hình), không dùng BRAM.</li>
+  <li>Còi: tần số và mẫu 16 khe × 64 ms; hết giờ timer thì <b>phần cứng tự kích chuông</b>, không chờ CPU.</li>
+  <li>UART 115 200 8N1, FIFO nhận 64 byte (hàng đợi, vào trước ra trước).</li>
+  <li><b>Màn hình ảo:</b> testbench dựng lại 8 chữ số từ chính các chân <code>an</code> (chọn chữ số) và <code>seg</code> (chọn vạch), để kiểm cái người dùng thật sự nhìn thấy (1 677 vòng, 0 sai).</li>
+  <li><b>27/10:</b> sửa lỗi bóng ma do thí nghiệm E4′ phát hiện (dòng <code>js</code> trong <code>seg7_scan.v</code>).</li>
+</ul>
+<h4>(c) Hoạt động thế nào</h4>
+<p><b>1. Quét (multiplexing).</b> 8 chữ số × 7 vạch = 56 bóng, nhưng chỉ có 8 chân vạch dùng chung (7 vạch + dấu chấm) và 8 chân chọn chữ số (anode). Mỗi lúc chỉ bật 1 chữ số, đưa mẫu vạch của chữ số đó ra 8 chân chung. Đổi lần lượt qua 8 chữ số, mỗi chữ số 1 ms (<code>G_SLOT</code> = 50 000 chu kỳ), nên mỗi chữ số sáng lại 1000 / 8 = <b>125 lần mỗi giây</b>. Mắt không theo kịp nên thấy cả 8 sáng cùng lúc (lưu ảnh võng mạc, giống phim là chuỗi ảnh tĩnh).</p>
+<p><b>2. Bóng ma và cách chống.</b></p>
+<div class="easy"><span class="lb">Nói đơn giản</span>
+  <p>Transistor bật/tắt chữ số không tắt ngay lập tức, mà tắt chậm một chút. Nếu đúng lúc đó đã đổi mẫu vạch sang chữ số kế, thì chữ số cũ (chưa tắt hẳn) hiện mờ mờ mẫu của chữ số mới. Vệt mờ đó là <b>bóng ma</b>.</p>
+</div>
+<figure>
+  <div class="svgbox">
+  <svg viewBox="0 0 620 170" width="620" role="img" aria-label="Giản đồ thời gian quét LED: anode chữ số 0 tắt, khoảng tắt, rồi anode chữ số 1 bật; chân vạch chỉ đổi khi hết khoảng tắt">
+    <text x="8" y="38" font-size="11">an[0]</text>
+    <text x="8" y="82" font-size="11">an[1]</text>
+    <text x="8" y="126" font-size="11">seg</text>
+    <!-- an0: high then low at 200, slow fall to 250 -->
+    <path class="ln" d="M70,24 H200 L250,44 H600" stroke-width="1.5"/>
+    <!-- an1: low until 330 then high -->
+    <path class="ln" d="M70,88 H330 V68 H600" stroke-width="1.5"/>
+    <!-- seg: bus -->
+    <path class="ln" d="M70,112 H326 L334,132 H600 M70,132 H326 L334,112 H600" stroke-width="1.2"/>
+    <text x="190" y="126" font-size="11" text-anchor="middle">vạch chữ số 0</text>
+    <text x="465" y="126" font-size="11" text-anchor="middle">vạch chữ số 1</text>
+    <rect x="200" y="14" width="130" height="128" style="fill:var(--accent);opacity:.10"/>
+    <path class="ln2" d="M200,10 V150 M330,10 V150"/>
+    <text x="265" y="160" font-size="10" text-anchor="middle" class="mut">khoảng tắt G_BLANK</text>
+    <text x="252" y="58" font-size="10" class="mut">tắt chậm</text>
+  </svg>
+  </div>
+  <figcaption>Cách đã sửa: trong khoảng tắt, mọi anode tắt và chân vạch <b>vẫn giữ mẫu của chữ số cũ</b>. Tới hết khoảng tắt mới đổi vạch, cùng lúc bật chữ số mới. Anode cũ tắt chậm cũng chỉ hiện lại đúng hình của nó, không có bóng ma.</figcaption>
+</figure>
+<ul>
+  <li>Code: trong khoảng <code>c &lt; G_BLANK</code>, tắt mọi anode và giữ nguyên vạch của chữ số cũ (dòng <code>js</code> nhớ chữ số cũ); tới <code>c = G_BLANK</code> mới đổi vạch và bật anode mới.</li>
+  <li>Bản đầu chỉ tắt anode nhưng đổi vạch ngay đầu khoảng tắt, nên khoảng tắt không có tác dụng. E4′ phát hiện ra điều này.</li>
+  <li>Kết quả sau khi sửa (<code>evidence/20261027_exp_e4_fix.log</code>): <code>G_BLANK</code> = 100 chu kỳ (2 µs), anode tắt chậm 50 chu kỳ → <b>bóng ma 0</b>.</li>
+</ul>
+<p><b>3. PWM độ sáng.</b> PWM (Pulse Width Modulation, điều chế độ rộng xung): bật tắt rất nhanh, bật càng lâu trong mỗi lượt thì trông càng sáng. Ở đây anode chỉ bật <code>BRIGHT × G_STEP</code> chu kỳ trong khe 1 ms của nó, <code>BRIGHT</code> từ 0 (tối) đến 15 (sáng nhất).</p>
+<p><b>4. UART: gửi dữ liệu qua 1 sợi dây.</b></p>
+<div class="easy"><span class="lb">Nói đơn giản</span>
+  <p>UART gửi từng bit lần lượt trên 1 dây, theo nhịp hai bên đã thống nhất trước (115 200 bit/giây). Khi rảnh dây giữ mức 1. Muốn gửi 1 byte: kéo xuống 0 một bit để báo "bắt đầu", gửi 8 bit dữ liệu, rồi trả về 1 một bit để báo "kết thúc". Kiểu này gọi là <b>8N1</b>: 8 bit dữ liệu, không bit chẵn lẻ (N), 1 bit stop.</p>
+</div>
+<figure>
+  <div class="svgbox">
+  <svg viewBox="0 0 620 120" width="620" role="img" aria-label="Khung UART 8N1: rảnh mức 1, bit start 0, 8 bit dữ liệu, bit stop 1; dấu chấm lấy mẫu ở giữa mỗi bit">
+    <g font-size="10" text-anchor="middle">
+      <text x="40" y="18" class="mut">rảnh</text><text x="95" y="18">start</text>
+      <text x="145" y="18">b0</text><text x="195" y="18">b1</text><text x="245" y="18">b2</text><text x="295" y="18">b3</text>
+      <text x="345" y="18">b4</text><text x="395" y="18">b5</text><text x="445" y="18">b6</text><text x="495" y="18">b7</text>
+      <text x="545" y="18">stop</text><text x="595" y="18" class="mut">rảnh</text>
+    </g>
+    <!-- data example 0x24 = 00100100 LSB first: b0=0 b1=0 b2=1 b3=0 b4=0 b5=1 b6=0 b7=0 -->
+    <path class="ln" stroke-width="1.6" d="M10,34 H70 V74 H220 V34 H270 V74 H370 V34 H420 V74 H520 V34 H615"/>
+    <path class="ln2" d="M70,28 V82 M120,28 V82 M170,28 V82 M220,28 V82 M270,28 V82 M320,28 V82 M370,28 V82 M420,28 V82 M470,28 V82 M520,28 V82 M570,28 V82"/>
+    <g style="fill:var(--copper)">
+      <circle cx="95" cy="74" r="3.5"/><circle cx="145" cy="74" r="3.5"/><circle cx="195" cy="74" r="3.5"/><circle cx="245" cy="34" r="3.5"/>
+      <circle cx="295" cy="74" r="3.5"/><circle cx="345" cy="74" r="3.5"/><circle cx="395" cy="34" r="3.5"/><circle cx="445" cy="74" r="3.5"/>
+      <circle cx="495" cy="74" r="3.5"/><circle cx="545" cy="34" r="3.5"/>
+    </g>
+    <text x="10" y="106" font-size="10" class="mut">mỗi ô = 1 bit = 434 chu kỳ (8,68 µs) · chấm = điểm lấy mẫu giữa bit · ví dụ byte 0x24, gửi bit thấp trước</text>
+  </svg>
+  </div>
+</figure>
+<ul>
+  <li>Bộ nhận: tín hiệu vào qua <b>2 FF đồng bộ</b> (tín hiệu từ ngoài không theo clock của chip, nếu dùng thẳng có thể làm FF rơi vào trạng thái lưng chừng gọi là metastability; qua 2 FF thì gần như hết) → thấy cạnh xuống (1 → 0) → chờ <b>nửa bit</b> → nếu vẫn 0 thì đúng là bit start (không phải nhiễu) → từ đó cứ cách 1 bit lấy mẫu một lần, tức <b>lấy mẫu ở giữa mỗi bit</b> → bit stop phải là 1, không thì báo lỗi <code>FRAME_ERR</code>.</li>
+  <li>Vì sao lấy mẫu giữa bit: ở mép bit tín hiệu đang đổi mức, đọc dễ sai. Giữa bit là chỗ ổn định nhất, chịu được lệch nhịp nhỏ giữa 2 bên.</li>
+  <li>Số chu kỳ mỗi bit: 50 000 000 / 115 200 ≈ 434,03 → dùng 434 → tốc độ thật 50 000 000 / 434 = 115 207 baud, lệch 0,006 %. Rất nhỏ so với mức UART chịu được.</li>
+</ul>
+<p><b>5. VGA "đuổi tia".</b> Màn VGA vẽ từng điểm ảnh từ trái sang phải, từ trên xuống dưới, 60 khung mỗi giây. Bộ đếm chạy 800 × 525 vị trí, trong đó 640 × 480 là phần hiện, phần dư là thời gian để tia quay về đầu dòng/đầu màn (hsync, vsync, porch). Không có bộ nhớ chứa khung hình: ở mỗi điểm (x, y), mạch tổ hợp tính ngay điểm đó thuộc chữ số nào, vạch nào, vạch đó đang sáng hay tắt, rồi xuất màu. Clock enable mỗi 2 chu kỳ, tức 25 MHz cho điểm ảnh.</p>
+<h4>(d) Kiến thức nền</h4>
+<ul>
+  <li>LED 7 đoạn, anode chung/cathode chung, quét đa hợp, lưu ảnh võng mạc.</li>
+  <li>PWM.</li>
+  <li>UART: khung 8N1, baud, lấy mẫu giữa bit, đồng bộ 2 FF chống metastability.</li>
+  <li>Chuẩn thời gian VGA 640 × 480 @ 60 Hz (hsync, vsync, front/back porch).</li>
+  <li>Kiểm thử đột biến (đột biến VGA 9/9, UART 15/15, màn ảo 4/4 đều bị bắt).</li>
+</ul>
+<h4>(e) Tự kiểm</h4>
+<pre><code>bash tools/run_unit.sh seg7 display_ctrl beeper uart vga_digits exp_e4</code></pre>
+<p>Gợi ý cài lỗi: bỏ dòng <code>js</code> (dùng lại <code>j</code>) rồi chạy <code>exp_e4</code>: bóng ma phải quay lại; đổi lấy mẫu UART từ giữa bit sang mép bit.</p>
+<h4>(f) Câu dễ bị hỏi</h4>
+<details class="qa"><summary>125 Hz từ đâu ra?</summary><div><p>50·10⁶ / (<code>G_SLOT</code> × 8) = 50 000 000 / (50 000 × 8) = 125. Mỗi chữ số 1 khe 1 ms, 8 chữ số thì 8 ms một vòng.</p></div></details>
+<details class="qa"><summary>Bóng ma là gì, vì sao <code>G_BLANK</code> lúc đầu không chống được?</summary><div><p>Chữ số cũ tắt chậm nên hiện mờ mẫu vạch của chữ số mới. Bản đầu đổi vạch ngay đầu khoảng tắt, đúng lúc anode cũ còn sáng, nên khoảng tắt vô dụng. Sửa: giữ vạch cũ tới hết khoảng tắt.</p></div></details>
+<details class="qa"><summary>UART lấy mẫu giữa bit để làm gì?</summary><div><p>Giữa bit tín hiệu ổn định nhất, chịu được lệch tốc độ nhỏ và nhiễu ở mép. Chờ nửa bit sau cạnh start là để rơi đúng vào giữa.</p></div></details>
+<details class="qa"><summary>VGA không có frame buffer thì vẽ thế nào?</summary><div><p>Tính màu từng điểm ngay lúc tia quét tới, từ tọa độ (x, y) và nội dung 8 ô hiển thị. Tốn ít bộ nhớ, đổi lại hình chỉ vẽ được những thứ tính nhanh được (chữ số 7 vạch).</p></div></details>
+<details class="qa"><summary>"Xé hình" khi firmware ghi 8 ô bằng 8 lệnh.</summary><div><p>Màn đọc 8 ô liên tục; firmware ghi lần lượt từng ô. Nếu màn đọc giữa chừng thì thấy nửa giá trị cũ nửa giá trị mới trong một khoảnh khắc. Cần giải thích được nó xảy ra lúc nào và có thấy bằng mắt không.</p></div></details>
+<p class="q">Thêm: ngân hàng câu hỏi §4.</p>
+</section>
+
+<!-- TV5 -->
+<section class="tv" id="tv5">
+<h3><span class="tag">TV5</span>Định thời chuẩn ms và đồng bộ giờ</h3>
+<div class="easy"><span class="lb">Nói đơn giản</span>
+  <p>TV5 giữ "trái tim đếm giờ". Thạch anh tạo clock không bao giờ chuẩn tuyệt đối: có cái nhanh, có cái chậm vài chục phần triệu. TV5 giữ khối biến clock thành nhịp 1 ms <b>có thể chỉnh nhanh chậm</b> (<code>CAL</code>), các khối đồng hồ, bấm giờ, hẹn giờ, báo thức, nút bấm, và phần firmware so giờ với máy tính để tự tính ra <code>CAL</code>.</p>
+</div>
+<h4>(a) File + spec</h4>
+<p><code>src/timebase.v</code> (47), <code>src/timers.v</code> (325: rtc, stopwatch, cdtimer, alarm), <code>src/buttons.v</code> (107), <code>src/rtc_bcd.v</code>, phần <code>sy_*</code> trong <code>fw/main.s</code>. Spec: <code>timer-spec.md</code>.</p>
+<h4>(b) Đã làm gì</h4>
+<ul>
+  <li><b>Timebase phân số có hiệu chỉnh <code>CAL</code></b>: sửa sai số thạch anh tới ~0,02 ppm.</li>
+  <li>RTC (đồng hồ thời gian thực): ms trong ngày, số ngày từ 01/01/2000, thứ trong tuần.</li>
+  <li>Stopwatch có <b>capture phần cứng</b>: nút A/B nối thẳng vào stopwatch, chụp đúng chu kỳ nhấn, không qua CPU.</li>
+  <li>Timer đếm ngược đi qua 0 sang số âm (để biết đã quá giờ bao lâu).</li>
+  <li>4 báo thức theo phút, kèm mặt nạ thứ (chọn kêu vào những thứ nào trong tuần).</li>
+  <li>Nút: chống rung cạnh đầu + khóa 10 ms, kèm dấu thời gian.</li>
+  <li><b>Đồng bộ giờ qua UART</b> (lệnh <code>$T</code>, <code>$Q</code>, <code>$R</code>) và tự tính <code>CAL</code> từ 2 lần đồng bộ.</li>
+</ul>
+<h4>(c) Hoạt động thế nào</h4>
+<p><b>1. ppm là gì.</b> ppm = phần triệu. Thạch anh lệch +50 ppm nghĩa là cứ 1 000 000 giây thì lệch 50 giây, tức khoảng 4,3 giây mỗi ngày (86 400 × 50 / 10⁶ = 4,32). Đồng hồ đeo tay rẻ thường lệch vài chục ppm.</p>
+<p><b>2. Bộ chia phân số.</b></p>
+<div class="easy"><span class="lb">Nói đơn giản</span>
+  <p>Nếu 1 ms phải dài 50 002,5 chu kỳ thì làm sao, vì không đếm được nửa chu kỳ? Cách giải: ms này dài 50 002, ms sau dài 50 003, xen kẽ nhau. Trung bình đúng 50 002,5. Giống năm nhuận: năm 365 ngày, cứ 4 năm thêm 1 ngày để trung bình ra 365,25.</p>
+</div>
+<p>1 ms = <code>G_N</code> = 50 000 chu kỳ + phần lẻ. Có 1 thanh ghi 16 bit giữ "phần lẻ tích lũy". Mỗi ms cộng <code>CAL</code> vào đó; phần tràn ra khỏi 16 bit là số chu kỳ ms này phải dài thêm.</p>
+<pre><code>s_k = frac_k + CAL ;  len_k = G_N + (s_k &gt;&gt;&gt; 16) ;  frac_(k+1) = s_k mod 65536</code></pre>
+<p class="q">Đọc: <code>s_k</code> là tổng tạm; <code>s_k &gt;&gt;&gt; 16</code> (trong Verilog <code>&gt;&gt;&gt;</code> là dịch số học, <code>timebase.v</code> dòng 27) = phần nguyên (chia 65 536 bỏ dư); <code>len_k</code> = độ dài ms thứ k; phần dư giữ lại cho ms sau.</p>
+<div class="ex"><span class="lb">Ví dụ từng bước: thạch anh +50 ppm</span>
+  <p>Đổi đơn vị: 1 ppm của 50 000 chu kỳ = 0,05 chu kỳ; nhân 65 536 → <b>1 ppm = 3 276,8 đơn vị <code>CAL</code></b>. Vậy +50 ppm → <code>CAL</code> = 163 840 = 2,5 × 65 536, tức 2,5 chu kỳ mỗi ms.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>ms</th><th class="m">frac trước</th><th class="m">s = frac + 163 840</th><th class="m">s &gt;&gt; 16</th><th class="m">độ dài ms</th><th class="m">frac sau</th></tr></thead>
+    <tbody>
+      <tr><td class="m">1</td><td class="m">0</td><td class="m">163 840</td><td class="m">2</td><td class="m">50 002</td><td class="m">32 768</td></tr>
+      <tr><td class="m">2</td><td class="m">32 768</td><td class="m">196 608</td><td class="m">3</td><td class="m">50 003</td><td class="m">0</td></tr>
+      <tr><td class="m">3</td><td class="m">0</td><td class="m">163 840</td><td class="m">2</td><td class="m">50 002</td><td class="m">32 768</td></tr>
+    </tbody>
+  </table></div>
+  <p>50 002 và 50 003 xen kẽ, trung bình 50 002,5. <code>CAL &gt; 0</code> thì ms dài hơn, nên đồng hồ <b>chậm lại</b>; dùng để bù thạch anh chạy nhanh. <code>CAL</code> âm thì ngược lại, và lúc đó phép <code>&gt;&gt;</code> phải là dịch <b>số học</b> (giữ bit dấu), nếu không số âm thành số dương khổng lồ.</p>
+</div>
+<p><b>3. Vì sao stopwatch/timer có bộ chia riêng.</b> Nhịp ms chung chạy liên tục. Nếu bấm start ở giữa một ms, stopwatch dùng nhịp chung sẽ đếm ms đầu tiên thiếu, sai tới ±1 ms. Bộ chia riêng bắt đầu đếm lại từ 0 đúng lúc bấm start, nên không lệch pha.</p>
+<p><b>4. Thí nghiệm E1′</b> (<code>report/2.4-cal-thi-nghiem.md</code>): mô phỏng thạch anh lệch, chip đồng bộ giờ với PC 2 lần cách nhau 60 phút, rồi tự tính <code>CAL</code>.</p>
+<ul>
+  <li>Thạch anh lệch từ −199 đến +150 ppm → sau khi áp <code>CAL</code> còn lệch <b>≤ 0,10 ppm</b>.</li>
+  <li>Khoảng ngắn thì kém hơn: lệch +3 ppm, 2 lần cách 10 phút → còn −0,32 ppm. Lý do: PC chỉ so được tới đơn vị ms, khoảng càng ngắn thì sai 1 ms càng chiếm tỉ lệ lớn.</li>
+  <li>+250 ppm thì firmware <b>từ chối</b>, vì nằm ngoài phạm vi chấp nhận ±200 ppm (lệch thế là thạch anh hỏng hoặc dữ liệu sai).</li>
+</ul>
+<div class="note"><p><b>Lưu ý:</b> "≤ 0,10 ppm" chỉ đúng khi 2 lần đồng bộ cách nhau 60 phút. Trích con số này phải kèm điều kiện.</p></div>
+<p><b>5. Nút bấm và chống rung.</b> Khi bấm nút cơ, tiếp điểm nảy lên xuống vài ms, tín hiệu nhấp nháy 0-1-0-1 trước khi ổn định. Không xử lý thì 1 lần bấm thành nhiều lần. Máy trạng thái:</p>
+<pre><code>IDLE ──nhấn──► (phát xung + chụp giờ) ──► LOCK_P (bỏ qua mọi thay đổi 10 ms)
+     ──► HELD (đang giữ) ──nhả──► LOCK_R (bỏ qua 10 ms) ──► IDLE</code></pre>
+<p>"Chống rung cạnh đầu": phản ứng <b>ngay lần đổi mức đầu tiên</b> (chụp giờ chính xác), rồi mới khóa 10 ms để bỏ phần nảy. Đánh đổi: một xung nhiễu ngắn cũng có thể bị tính là 1 lần bấm.</p>
+<p><b>6. Đồng bộ giờ với PC.</b></p>
+<ol>
+  <li>PC gửi một câu chữ qua UART: <code>$T,&lt;ms&gt;,&lt;ngày&gt;*&lt;checksum&gt;</code> (checksum = số kiểm để phát hiện câu bị lỗi đường truyền).</li>
+  <li>Đúng lúc ký tự cuối <code>\n</code> tới, handler ngắt <b>chụp giờ của chip</b>.</li>
+  <li>Firmware so giờ chip đã chụp với giờ PC, rồi đặt giờ mới (<code>SET_MS</code> + <code>ARM</code>; giờ mới được nạp đúng ở nhịp ms kế tiếp).</li>
+  <li>Sau 2 lần đồng bộ cách nhau đủ lâu: biết trong khoảng đó chip chạy nhanh/chậm bao nhiêu ms so với PC → tính ra <code>CAL</code>.</li>
+</ol>
+<p><b>7. Báo thức không kêu khi nạp giờ (ARM)</b>, kể cả khi nạp đúng phút báo (<code>timer-spec</code> §6). Lý do: đặt giờ là thao tác chỉnh máy, không phải thời gian trôi tới giờ báo.</p>
+<h4>(d) Kiến thức nền</h4>
+<ul>
+  <li>Bộ chia tần số, bộ chia phân số / bộ tích lũy pha (giống thuật toán Bresenham vẽ đường thẳng), ppm và sai số thạch anh.</li>
+  <li>Bộ đếm, máy trạng thái hữu hạn (FSM).</li>
+  <li>Chống rung nút, đồng bộ tín hiệu ngoài (2 FF, metastability).</li>
+  <li>Input capture / timestamp phần cứng (giống timer của vi điều khiển STM32).</li>
+  <li>Đồng bộ thời gian kiểu NTP đơn giản: chụp giờ ở thời điểm nhận, bù trễ.</li>
+</ul>
+<h4>(e) Tự kiểm</h4>
+<pre><code>bash tools/run_unit.sh timebase rtc stopwatch cdtimer alarm buttons exp_cal
+pytest tools/test_iss.py -k e6</code></pre>
+<p>Gợi ý cài lỗi: đổi dịch số học <code>&gt;&gt;&gt;</code> thành dịch logic (sai khi <code>CAL</code> âm); bỏ quy tắc "ARM không kêu báo thức".</p>
+<h4>(f) Câu dễ bị hỏi</h4>
+<details class="qa"><summary>1 ppm sao lại bằng 3 276,8?</summary><div><p>1 ppm của 1 ms = 50 000 × 10⁻⁶ = 0,05 chu kỳ. Đơn vị <code>CAL</code> là 1/65 536 chu kỳ, nên 0,05 × 65 536 = 3 276,8.</p></div></details>
+<details class="qa"><summary><code>CAL</code> âm thì <code>&gt;&gt;</code> phải là dịch gì?</summary><div><p>Dịch số học: chép bit dấu vào các bit bên trái, để số âm vẫn âm. Dịch logic chèn 0 sẽ biến số âm thành số dương rất lớn, ms dài ra khủng khiếp.</p></div></details>
+<details class="qa"><summary>Vì sao chống rung ở cạnh đầu, đánh đổi gì?</summary><div><p>Phản ứng ngay lần đổi mức đầu tiên nên dấu thời gian chính xác, không trễ 10 ms. Đánh đổi: xung nhiễu ngắn cũng được tính là 1 lần bấm.</p></div></details>
+<details class="qa"><summary>Nạp giờ đúng phút báo thức có kêu không?</summary><div><p>Không. ARM được thiết kế để không kích báo thức (<code>timer-spec</code> §6).</p></div></details>
+<details class="qa"><summary>E1′ còn lệch 0,02 ppm do đâu?</summary><div><p><code>CAL</code> là số nguyên, mỗi đơn vị ≈ 0,0003 ppm, cộng với sai số đo tới ms của PC, nên còn một phần lẻ không bù hết.</p></div></details>
+<p class="q">Thêm: ngân hàng câu hỏi §5.</p>
+</section>
+
+<!-- ======================= 5. CÂU CHÉO ======================= -->
+<h2 id="s5"><span class="no">5</span>Câu chéo: ai cũng phải trả lời được</h2>
+<p>Các câu này nối nhiều gói với nhau. Mỗi người phải kể được cả đường đi, kể cả đoạn không thuộc gói mình.</p>
+<ol class="cross">
+  <li><b>Đường đi của 1 lệnh <code>lw $t0, −252($zero)</code></b> (đọc giờ) trên G1:
+    <ol>
+      <li>IMEM xuất lệnh theo PC.</li>
+      <li><code>control</code> giải mã: đây là <code>lw</code>, cần ALU cộng, cần đọc bộ nhớ, cần ghi regfile.</li>
+      <li>ALU cộng <code>$zero</code> (= 0) với −252 → địa chỉ <code>0xFFFFFF04</code>.</li>
+      <li>Bus thấy địa chỉ thuộc vùng MMIO → chuyển tới khối <code>timers</code>.</li>
+      <li><code>timers</code> trả giá trị <code>MS_OF_DAY</code> → ghi vào <code>$t0</code>.</li>
+    </ol>
+    Trên G2: IF (lấy lệnh) → ID (giải mã, đọc <code>$zero</code>) → EX (cộng địa chỉ) → MEM (đọc MMIO) → WB (ghi <code>$t0</code>).</li>
+  <li><b>Bấm nút B ở chế độ STOPWATCH:</b> <code>buttons</code> (đồng bộ 2 FF, chống rung) → xung nhấn → <code>stopwatch</code> chụp thời gian lap <b>ngay chu kỳ đó</b> (không qua CPU) → đưa vào FIFO → firmware lấy ra → <code>fmt</code> đổi thành chữ số → ghi vào Display RAM → <code>seg7_scan</code> quét ra → LED sáng.</li>
+  <li><b>1 ms đến từ đâu:</b> clock 50 MHz → <code>timebase</code> đếm 50 000 chu kỳ (± theo <code>CAL</code>) → phát xung <code>tick_ms</code> → xung này đi tới RTC, nút, nháy màn, còi, và thanh ghi <code>TICK_1MS</code> cho firmware.</li>
+  <li><b>Vì sao G2 CPI 2,027 mà vẫn nhanh hơn G1 CPI 1,428:</b> thời gian = số lệnh × CPI / tần số; G2 chạy 50 MHz, G1 25 MHz (xem ví dụ ở TV2).</li>
+  <li><b>Vì sao nói "đã kiểm thử đúng":</b> 3 lớp đáp án độc lập (vector do script sinh, ISS, MARS) + 589 kiểm trên cả chip + đột biến cài vào đều bị test bắt. Hạn chế: chỉ mô phỏng, không có board, không có Fmax.</li>
+  <li><b>Phần nào AI viết, mình hiểu tới đâu:</b> trả lời thật, chỉ dòng code.</li>
+</ol>
+
+<!-- ======================= 6. CẦN CHỐT ======================= -->
+<h2 id="s6"><span class="no">6</span>Cần chốt trong buổi họp</h2>
+<p class="q">Tick để tự theo dõi. Dấu tick chỉ lưu trên trình duyệt của bạn, người khác không thấy.</p>
+<ol class="checks">
+  <li><label><input type="checkbox" id="c1"><span>Ghép <b>tên thật ↔ TV1…TV5</b> (điền <code>docs/hop-tuan.md</code> bảng "Nhận việc"). Nhóm 5 hay 6 người? Bìa LaTeX đang để 6 dòng.</span></label></li>
+  <li><label><input type="checkbox" id="c2"><span>Gói Long tự chọn để qua cổng.</span></label></li>
+  <li><label><input type="checkbox" id="c3"><span>Ai hỏi thầy: <b>barem</b>, <b>mẫu báo cáo/số trang</b>, có cần đăng ký lại đề (<code>docs/de-bai.md</code> câu 1, 3, 5).</span></label></li>
+  <li><label><input type="checkbox" id="c4"><span>Cách ghi <b>% đóng góp</b> và <b>khai phần AI viết</b> ở Phụ lục A. Đề xuất: ghi rõ "code do Claude viết theo yêu cầu, TVx đọc hiểu, qua cổng, làm hình/báo cáo/thí nghiệm".</span></label></li>
+  <li><label><input type="checkbox" id="c5"><span>Mỗi người xác nhận đã chạy được <code>bash tools/run_unit.sh &lt;gói mình&gt;</code> trên máy mình (hạn 01/11).</span></label></li>
+  <li><label><input type="checkbox" id="c6"><span>Hạn nháp hình H1–H7: 08/11; chốt 21/11.</span></label></li>
+  <li><label><input type="checkbox" id="c7"><span>Mẫu slide (beamer): ai lấy.</span></label></li>
+</ol>
+
+<!-- ======================= 7. TỪ ĐIỂN ======================= -->
+<h2 id="s7"><span class="no">7</span>Từ điển</h2>
+<div class="tbl"><table>
+  <thead><tr><th>Từ</th><th>Nghĩa</th></tr></thead>
+  <tbody>
+    <tr><td class="k">ALU</td><td>khối tính cộng, trừ, logic, so sánh trong CPU</td></tr>
+    <tr><td class="k">anode / an</td><td>chân chọn chữ số nào trên LED đang sáng</td></tr>
+    <tr><td class="k">assembler</td><td>chương trình dịch hợp ngữ thành mã máy</td></tr>
+    <tr><td class="k">BCD</td><td>mỗi chữ số thập phân dùng riêng 4 bit</td></tr>
+    <tr><td class="k">BRAM</td><td>khối bộ nhớ có sẵn trong FPGA, đọc trễ 1 nhịp clock</td></tr>
+    <tr><td class="k">bubble / stall</td><td>chỗ trống trong pipeline khi một lệnh phải chờ</td></tr>
+    <tr><td class="k">bus</td><td>đường nối CPU với bộ nhớ và ngoại vi, chọn khối theo địa chỉ</td></tr>
+    <tr><td class="k"><code>busy</code> freeze</td><td>CPU đứng chờ <code>div</code>/<code>bcd</code> tính xong</td></tr>
+    <tr><td class="k"><code>CAL</code></td><td>số hiệu chỉnh độ dài 1 ms, đơn vị 1/65 536 chu kỳ; 1 ppm = 3 276,8</td></tr>
+    <tr><td class="k">capture</td><td>phần cứng tự chụp thời điểm xảy ra sự kiện, không chờ CPU</td></tr>
+    <tr><td class="k">clock, chu kỳ</td><td>tín hiệu nhịp; 50 MHz → 1 chu kỳ = 20 ns</td></tr>
+    <tr><td class="k">co-sim</td><td>chạy chip và ISS cùng chương trình rồi so trace từng lệnh</td></tr>
+    <tr><td class="k">CP0, EPC</td><td>bộ thanh ghi điều khiển ngắt; EPC = địa chỉ quay về sau ngắt</td></tr>
+    <tr><td class="k">CPI</td><td>số chu kỳ trung bình mỗi lệnh</td></tr>
+    <tr><td class="k">datapath</td><td>các dây và khối mà dữ liệu đi qua trong CPU</td></tr>
+    <tr><td class="k">DSE</td><td>so sánh có số đo giữa các phương án thiết kế</td></tr>
+    <tr><td class="k">đột biến (mutation)</td><td>cố ý cài lỗi vào code để xem test có bắt được không</td></tr>
+    <tr><td class="k">evidence</td><td>file log chứng minh 1 con số, ở <code>evidence/</code></td></tr>
+    <tr><td class="k">FF (flip-flop)</td><td>ô nhớ 1 bit, đổi giá trị ở sườn clock</td></tr>
+    <tr><td class="k">FIFO</td><td>hàng đợi: vào trước ra trước</td></tr>
+    <tr><td class="k">firmware</td><td>chương trình chạy trên chip (<code>fw/main.s</code>)</td></tr>
+    <tr><td class="k">flush</td><td>xóa các lệnh đã lấy nhầm khỏi pipeline</td></tr>
+    <tr><td class="k">Fmax</td><td>tần số clock tối đa mạch chạy đúng; cần công cụ FPGA mới đo được</td></tr>
+    <tr><td class="k">forwarding</td><td>đưa thẳng kết quả từ thanh ghi tầng về cho lệnh sau, khỏi chờ</td></tr>
+    <tr><td class="k">FPGA</td><td>chip có thể nạp lại mạch nhiều lần; "board" là mạch có gắn FPGA</td></tr>
+    <tr><td class="k">golden model</td><td>mô hình chuẩn dùng làm đáp án để so</td></tr>
+    <tr><td class="k">handler</td><td>đoạn code chạy khi có ngắt, ở địa chỉ <code>0x180</code></td></tr>
+    <tr><td class="k">hazard</td><td>tình huống pipeline không chạy tiếp bình thường được</td></tr>
+    <tr><td class="k">hex</td><td>cơ số 16, mỗi ký tự = 4 bit, viết <code>0x...</code></td></tr>
+    <tr><td class="k">IMEM / DMEM</td><td>bộ nhớ lệnh / bộ nhớ dữ liệu</td></tr>
+    <tr><td class="k">ISA</td><td>bộ quy tắc lệnh: có lệnh nào, mã hóa ra sao</td></tr>
+    <tr><td class="k">ISS</td><td>trình mô phỏng tập lệnh (Python), dùng làm đáp án chuẩn</td></tr>
+    <tr><td class="k">LUT</td><td>ô logic cơ bản của FPGA, dùng để đo kích thước mạch</td></tr>
+    <tr><td class="k">metastability</td><td>FF rơi vào trạng thái lưng chừng khi tín hiệu vào đổi đúng lúc sườn clock</td></tr>
+    <tr><td class="k">MMIO</td><td>thanh ghi ngoại vi đọc/ghi bằng <code>lw</code>/<code>sw</code> như bộ nhớ</td></tr>
+    <tr><td class="k">ngắt (interrupt)</td><td>ngoại vi gọi CPU dừng việc đang làm để xử lý sự kiện</td></tr>
+    <tr><td class="k">PC</td><td>địa chỉ lệnh đang chạy</td></tr>
+    <tr><td class="k">pipeline</td><td>chia lệnh thành nhiều tầng, nhiều lệnh chạy chồng nhau</td></tr>
+    <tr><td class="k">polling</td><td>CPU tự đọc đi đọc lại để xem có sự kiện chưa</td></tr>
+    <tr><td class="k">ppm</td><td>phần triệu; 50 ppm ≈ 4,3 giây mỗi ngày</td></tr>
+    <tr><td class="k">PWM</td><td>bật tắt nhanh, đổi tỉ lệ thời gian bật để chỉnh độ sáng</td></tr>
+    <tr><td class="k">regfile</td><td>32 thanh ghi 32 bit của CPU</td></tr>
+    <tr><td class="k">RTC</td><td>đồng hồ thời gian thực: giờ trong ngày, ngày, thứ</td></tr>
+    <tr><td class="k">RTL</td><td>mô tả phần cứng bằng Verilog ở mức thanh ghi</td></tr>
+    <tr><td class="k">SoC</td><td>cả hệ thống (CPU, bộ nhớ, ngoại vi) trên một chip</td></tr>
+    <tr><td class="k">testbench</td><td>chương trình mô phỏng đưa đầu vào và kiểm đầu ra của mạch</td></tr>
+    <tr><td class="k">trace</td><td>bản ghi từng lệnh đã chạy: PC, thanh ghi, giá trị</td></tr>
+    <tr><td class="k">UART</td><td>cổng nối tiếp gửi từng bit trên 1 dây; 8N1 = 8 bit dữ liệu, không chẵn lẻ, 1 bit stop</td></tr>
+    <tr><td class="k">Verilog</td><td>ngôn ngữ mô tả phần cứng</td></tr>
+  </tbody>
+</table></div>
+
+<footer>Phần mục 0–7 khớp bản gốc <code>docs/hop-nhom-01-ban-giao.md</code>; trang này thêm phần A, khung giải thích, ví dụ từng bước và gợi ý trả lời. Số liệu của đồ án lấy từ bản gốc và <code>evidence/</code>; ví dụ minh họa (7 ÷ 2, đổi 13 sang BCD, byte UART 0x24) là ví dụ tự tính, không phải số đo.</footer>
+</main>
+</div>
+
+<script>
+document.querySelectorAll('ol.checks input').forEach(function (cb) {
+  var key = 'hop01-' + cb.id;
+  try { cb.checked = localStorage.getItem(key) === '1'; } catch (e) {}
+  cb.addEventListener('change', function () {
+    try { localStorage.setItem(key, cb.checked ? '1' : '0'); } catch (e) {}
+  });
+});
+</script>

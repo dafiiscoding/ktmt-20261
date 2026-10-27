@@ -1,0 +1,14 @@
+# t_ms S7..S0 LIT  | Si = {dp,gfedcba} hex, LIT bit i = chu so i co sang
+6 00 00 00 00 00 00 00 00 ff
+12 00 00 5b cf 6d ef 6d 6d ff
+1017 00 00 5b cf 6d ef 6d 7d ff
+2016 00 00 5b cf 6d ef 6d 07 ff
+3014 00 00 5b cf 6d ef 6d 7f ff
+4019 00 00 5b cf 6d ef 6d 6f ff
+5011 00 00 3f bf 3f ef 6d 6f ff
+5017 00 00 3f bf 3f bf 3f 3f ff
+6016 00 00 3f bf 3f bf 3f 06 ff
+7014 00 00 3f bf 3f bf 3f 5b ff
+8019 00 00 3f bf 3f bf 3f 4f ff
+9017 00 00 3f bf 3f bf 3f 66 ff
+10016 00 00 3f bf 3f bf 3f 6d ff

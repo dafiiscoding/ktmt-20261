@@ -1,0 +1,8 @@
+# 2026-10-01 22:52 · Icarus Verilog version 14.0 (devel) (s20260301-500-g2e81fcccb-dirty)
+# lenh: bash tools/run_unit.sh timebase
+# nguon: src/timebase.v tb/timebase_tb.v
+# sha1 09fde188f737a89335d02cf97a248a67b623aebe *src/timebase.v
+# sha1 2f1720aba9dec7deaf45df2e0d3a385774256131 *tb/timebase_tb.v
+PASS timebase_tb 693
+tb/timebase_tb.v:149: $finish called at 294348540000 (1ps)
+# exit=0

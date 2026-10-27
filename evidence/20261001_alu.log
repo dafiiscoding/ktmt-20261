@@ -1,0 +1,8 @@
+# 2026-10-01 22:52 · Icarus Verilog version 14.0 (devel) (s20260301-500-g2e81fcccb-dirty)
+# lenh: bash tools/run_unit.sh alu
+# nguon: src/alu.v tb/alu_tb.v
+# sha1 3a71474f1015b30e4bff12dddde599defc9d9bec *src/alu.v
+# sha1 f2de0aabf62423a064ea13d4bdef6969f3cdf3e9 *tb/alu_tb.v
+PASS alu_tb 4200
+tb/alu_tb.v:41: $finish called at 4200000 (1ps)
+# exit=0

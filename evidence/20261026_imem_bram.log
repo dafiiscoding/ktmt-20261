@@ -1,0 +1,17 @@
+# 26/10 — IMEM G1 vao BRAM (Yosys synth_xilinx -flatten -run :map_ffs, soc_top G1, IMEM_FILE work/main.hex 1151 lenh, G_IMEM_AW 11)
+# Truoc (work/yosys_soc_top_G1_20261026_vga.log): 'using FF mapping for memory soc_top.u_cpu.imem', 16 933 o, 1 RAMB36E1.
+# Nguyen nhan (verified bang thi nghiem): nhanh reset doc imem[0] = cong doc thu 2. Ghi chu 21/10 ('dia chi to hop pc_new') SAI: sau sua van dung pc_new ma vao BRAM.
+# Sua src/cpu_g1.v: 1 always rieng, instr <= imem[rst ? 0 : pc_new...] khi rst||ph_a. Hoi quy work/regress_20261026_bram.log EXIT=0.
+# Sau:
+4803:mapping memory soc_top.u_btn.fifo via $__XILINX_LUTRAM_SDP_
+4805:mapping memory soc_top.u_cpu.dmem via $__XILINX_BLOCKRAM_TDP_
+4806:mapping memory soc_top.u_cpu.imem via $__XILINX_BLOCKRAM_TDP_
+4807:using FF mapping for memory soc_top.u_cpu.u_rf.r
+4808:using FF mapping for memory soc_top.$flatten\u_disp.\u_scan.\u_rom.$auto$proc_rom.cc:155:do_switch$2867
+4809:using FF mapping for memory soc_top.$flatten\u_disp.\u_vga.\u_rom.$auto$proc_rom.cc:155:do_switch$2867
+4810:mapping memory soc_top.u_sw.fifo via $__XILINX_LUTRAM_SDP_
+4812:mapping memory soc_top.u_uart.fifo via $__XILINX_LUTRAM_SDP_
+    13364 cells
+        3   RAMB36E1
+       10   RAM32M
+        3   RAM64M

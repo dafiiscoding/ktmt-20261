@@ -1,0 +1,5 @@
+# 2026-10-01 22:52 · Icarus Verilog version 14.0 (devel) (s20260301-500-g2e81fcccb-dirty)
+# lenh: PLUSARGS=+slow bash tools/run_unit.sh timebase  (TB-3 them G_N=50000, CAL=163840, 1000 ms)
+PASS timebase_tb 694
+tb/timebase_tb.v:149: $finish called at 1294398580000 (1ps)
+# exit=0

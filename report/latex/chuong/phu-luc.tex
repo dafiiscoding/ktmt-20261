@@ -1,0 +1,29 @@
+\chapter{PHÂN CÔNG CÔNG VIỆC}
+\begin{table}[htbp]\centering
+\caption{Phân công nhiệm vụ và đóng góp}
+\begin{tabularx}{\linewidth}{|c|l|c|X|c|X|}
+\hline
+\textbf{STT} & \textbf{Họ và tên} & \textbf{MSSV} & \textbf{Gói phụ trách} & \textbf{\%} & \textbf{Bằng chứng} \\ \hline
+1 & Đoàn Danh Long & & biên tập, \ldots & & \\ \hline
+2 & TV1 & & ALU \& số học & & \\ \hline
+3 & TV2 & & công cụ \& hazard & & \\ \hline
+4 & TV3 & & CPU \& chip & & \\ \hline
+5 & TV4 & & hiển thị \& âm thanh & & \\ \hline
+6 & TV5 & & định thời ms & & \\ \hline
+\end{tabularx}
+\end{table}
+\TODO{Long. Đóng góp ghi \% (không ghi thang 1--5 như Nhóm 3), kèm bằng chứng (\texttt{hop-tuan.md}, kết quả cổng). Chốt cách khai phần AI viết (\texttt{KE-HOACH} §4b).}
+
+\chapter{KẾ HOẠCH VÀ TIẾN ĐỘ}
+\TODO{Long. Bảng kế hoạch (\texttt{docs/goi-viec.md}) đặt cạnh thực tế (\texttt{docs/hop-tuan.md} + worklog), theo tuần.}
+
+\chapter{HƯỚNG DẪN CHẠY LẠI}
+\TODO{TV2. Người khác chạy được trên máy họ. Tối thiểu:}
+\begin{lstlisting}[language=bash,numbers=none]
+source tools/env.sh
+bash tools/run_unit.sh          # full regression
+python tools/cosim_iss.py --g2 --rand 0
+\end{lstlisting}
+
+\chapter{TRÍCH TRACE VÀ LOG}
+\TODO{TV2. Trích ngắn từ \texttt{evidence/}, ghi tên file gốc.}

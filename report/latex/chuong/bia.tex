@@ -1,0 +1,31 @@
+% Bìa: khung đôi đỏ/đen như báo cáo Nhóm 3. Logo: đặt hinh/logo-hust.png, hinh/logo-fami.png
+\begin{titlepage}
+\begin{tikzpicture}[remember picture,overlay]
+  \draw[line width=3pt,red!70!black] ([xshift=1.5cm,yshift=-1.5cm]current page.north west) rectangle ([xshift=-1.5cm,yshift=1.5cm]current page.south east);
+  \draw[line width=0.6pt] ([xshift=1.2cm,yshift=-1.2cm]current page.north west) rectangle ([xshift=-1.2cm,yshift=1.2cm]current page.south east);
+\end{tikzpicture}
+\centering\setstretch{1.15}
+{\bfseries\large ĐẠI HỌC BÁCH KHOA HÀ NỘI\\ KHOA TOÁN -- TIN\par}
+\vspace{1.2cm}
+\IfFileExists{hinh/logo-hust.png}{\includegraphics[height=3.5cm]{logo-hust}}{\fbox{\parbox[c][3.5cm][c]{3cm}{\centering logo HUST}}}
+\hspace{1.5cm}
+\IfFileExists{hinh/logo-fami.png}{\includegraphics[height=3.5cm]{logo-fami}}{\fbox{\parbox[c][3.5cm][c]{3cm}{\centering logo FaMI}}}
+\par\vspace{1.2cm}
+{\bfseries\fontsize{26}{32}\selectfont BÁO CÁO\\[4pt] KIẾN TRÚC MÁY TÍNH\par}
+\vspace{0.8cm}
+{\bfseries\Large Chủ đề: Thiết kế SoC đồng hồ điện tử WatchChip\\ trên CPU MIPS tự thiết kế (đơn chu kỳ và pipeline)\par}
+\vspace{1.2cm}
+\begin{tabular}{r l l}
+Sinh viên: & \textbf{Đoàn Danh Long} & \TODOmssv \\
+           & \textbf{TV1 — chưa điền} & \TODOmssv \\
+           & \textbf{TV2 — chưa điền} & \TODOmssv \\
+           & \textbf{TV3 — chưa điền} & \TODOmssv \\
+           & \textbf{TV4 — chưa điền} & \TODOmssv \\
+           & \textbf{TV5 — chưa điền} & \TODOmssv \\
+Lớp: & \textbf{chưa điền} & \\
+Giảng viên giảng dạy: & \textbf{chưa điền} & \\
+\end{tabular}
+\vfill
+{\bfseries\large HÀ NỘI, 12/2026\par}
+\vspace{1cm}
+\end{titlepage}

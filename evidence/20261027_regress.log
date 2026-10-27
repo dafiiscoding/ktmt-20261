@@ -1,0 +1,159 @@
+PASS alarm_tb 15
+tb/alarm_tb.v:129: $finish called at 133120000 (1ps)
+PASS alu_tb 4200
+tb/alu_tb.v:41: $finish called at 4200000 (1ps)
+PASS bcd_tb 112537
+tb/bcd_tb.v:96: $finish called at 1798381000 (1ps)
+PASS beeper_tb 15
+tb/beeper_tb.v:118: $finish called at 4162480000 (1ps)
+PASS buttons_tb 20
+tb/buttons_tb.v:158: $finish called at 2729040000 (1ps)
+PASS cdtimer_tb 20
+tb/cdtimer_tb.v:123: $finish called at 2540300000 (1ps)
+man ao: 17 anh, ket thuc o ms_of_day = 5019
+PASS clock_demo_tb 75
+tb/clock_demo_tb.v:157: $finish called at 10361030000 (1ps)
+PASS control_tb 82646
+tb/control_tb.v:69: $finish called at 100089000 (1ps)
+PASS display_ctrl_tb 56
+tb/display_ctrl_tb.v:139: $finish called at 134440000 (1ps)
+E2 G_N=50 cal=0 chu_ky=100000 ky_vong=100000 OK
+E2 G_N=50 cal=65500 chu_ky=101998 ky_vong=101998 OK
+E2 G_N=50 cal=-65500 chu_ky=98001 ky_vong=98001 OK
+E2 G_N=50 cal=163840 chu_ky=105000 ky_vong=105000 OK
+E2 G_N=50 cal=-163840 chu_ky=95000 ky_vong=95000 OK
+E2 G_N=50 cal=655360 chu_ky=120000 ky_vong=120000 OK
+E2 G_N=50 cal=-655360 chu_ky=80000 ky_vong=80000 OK
+E2 G_N=50 cal=12345 chu_ky=100376 ky_vong=100376 OK
+E2 G_N=50 cal=-1 chu_ky=99999 ky_vong=99999 OK
+PASS exp_cal_tb 9
+tb/exp_cal_tb.v:95: $finish called at 18008440000 (1ps)
+E3 D=2 n=30 tre_chu_ky min=4 tb=25.8 max=61 lap_lech=0 stamp_lech=0
+PASS exp_e3_tb 5
+tb/exp_e3_tb.v:97: $finish called at 2033340000 (1ps)
+tb/exp_e4_tb.v:36: warning: @* is sensitive to all 8 words in array 'left'.
+tb/exp_e4_tb.v:36: warning: @* is sensitive to all 8 words in array 'left'.
+tb/exp_e4_tb.v:36: warning: @* is sensitive to all 8 words in array 'left'.
+tb/exp_e4_tb.v:36: warning: @* is sensitive to all 8 words in array 'left'.
+tb/exp_e4_tb.v:36: warning: @* is sensitive to all 8 words in array 'left'.
+tb/exp_e4_tb.v:36: warning: @* is sensitive to all 8 words in array 'left'.
+tb/exp_e4_tb.v:36: warning: @* is sensitive to all 8 words in array 'left'.
+tb/exp_e4_tb.v:36: warning: @* is sensitive to all 8 words in array 'left'.
+E4 G_SLOT=50000 G_BLANK=0 T_OFF=50 gap=5 on=200135 ghost=135 ti_le=0.067%
+E4 G_SLOT=50000 G_BLANK=100 T_OFF=50 gap=10 on=199720 ghost=0 ti_le=0.000%
+E4 G_SLOT=12500 G_BLANK=0 T_OFF=50 gap=5 on=200675 ghost=630 ti_le=0.314%
+E4 G_SLOT=12500 G_BLANK=100 T_OFF=50 gap=10 on=199000 ghost=0 ti_le=0.000%
+E4 G_SLOT=3125 G_BLANK=0 T_OFF=50 gap=5 on=202835 ghost=2520 ti_le=1.242%
+E4 G_SLOT=3125 G_BLANK=100 T_OFF=50 gap=10 on=196120 ghost=0 ti_le=0.000%
+E4 G_SLOT=3125 G_BLANK=0 T_OFF=150 gap=5 on=209135 ghost=8120 ti_le=3.883%
+E4 G_SLOT=3125 G_BLANK=100 T_OFF=150 gap=10 on=202420 ghost=2240 ti_le=1.107%
+PASS exp_e4_tb 9
+tb/exp_e4_tb.v:109: $finish called at 4000040000 (1ps)
+core G1, D = 2, bcd tuan tu: nen (jal+jr+lw) 6 chu ky he thong
+  fmt_div  448 448 448   fmt_bcd  324 324 324   fmt_hw  48   (0 / 12:34:56.789 / 23:59:59.999)
+PASS fmt_bench_tb 11
+tb/fmt_bench_tb.v:79: $finish called at 50200000 (1ps)
+PASS hazard_tb 200007
+tb/hazard_tb.v:88: $finish called at 200007000 (1ps)
+PASS irq_tb 12
+tb/irq_tb.v:84: $finish called at 501000 (1ps)
+PASS muldiv_tb 5806
+tb/muldiv_tb.v:117: $finish called at 1632500000 (1ps)
+PASS regfile_tb 2040
+tb/regfile_tb.v:91: $finish called at 20160000 (1ps)
+PASS rtc_bcd_tb 11
+tb/rtc_bcd_tb.v:107: $finish called at 28640880000 (1ps)
+PASS rtc_tb 22
+tb/rtc_tb.v:124: $finish called at 61320000 (1ps)
+PASS seg7_tb 25362
+tb/seg7_tb.v:152: $finish called at 168720000 (1ps)
+v0 = 00007fff, 538 lenh MMIO, 20492 chu ky he thong
+PASS soc_bus_tb 20
+tb/soc_bus_tb.v:88: $finish called at 410000000 (1ps)
+ngat: 10 lan, do tre (CYCLE_COUNT dau handler - IRQ_STAMP) min 3 max 3 chu ky he thong (D = 2)
+man ao: 13 anh -> work/screen_soc_clock.log
+PASS soc_clock_tb 24
+tb/soc_clock_tb.v:107: $finish called at 10601160000 (1ps)
+C5-5 D = 1526: vong 1 lenh min 1795 max 2963; vong div min 2417 max 43261 chu ky he thong
+PASS soc_irqlat_tb 5
+tb/soc_irqlat_tb.v:60: $finish called at 12421940000 (1ps)
+v0 = 0000003f, 6 khung, 1454 chu ky he thong
+PASS soc_uart_tb 9
+tb/soc_uart_tb.v:55: $finish called at 29240000 (1ps)
+PASS stopwatch_tb 34
+tb/stopwatch_tb.v:177: $finish called at 5205820000 (1ps)
+  sys_0: 491 dong vector
+PASS sys_0 ham mong doi cua tb khop fmt_*.txt, date.txt
+PASS sys_1 nua dem, ngay/thu, 12h, giay.ms, trang ngay
+PASS sys_2 stopwatch 1234 ms
+  lap: 254 554 908, dung o 1055 ms
+PASS sys_3 lap x3 dung thu tu
+  RUN -> ZERO 100000 chu ky, RUN -> -500 125000 chu ky
+PASS sys_4 timer ve 0 dung ms, chuong, so am
+  bao thuc: HIT o ms 25200000, chuong o ms 25200003
+  snooze: nhan C o ms 25200003, keu lai o ms 25500006 (+300003 ms)
+PASS sys_5 bao thuc, snooze, tu tat, Chu nhat, chuong gio, sua gio
+PASS sys_6 SET: nhay, 23+1 -> 0, luu, ngay/thu, kep ngay
+  $Z: ms 12304 (ZERO o ms 12298)
+  $Q: LF vao FIFO o ms 54149907, $R tra ms 54149907
+PASS sys_7 sync UART: $Z, $T, cau sai, $Q/$R, CAL
+  D7: 1676 vong quet duoc so, 38 vong co chu so tat (nhay / BRIGHT 0), 0 sai -> work/screen_system.log
+chay 800871 chu ky (16017 ms mo phong)
+PASS system_tb 589
+tb/system_tb.v:626: $finish called at 16017420000 (1ps)
+PASS timebase_tb 693
+tb/timebase_tb.v:149: $finish called at 294348540000 (1ps)
+PASS uart_tb 28
+tb/uart_tb.v:199: $finish called at 545340000 (1ps)
+  V-3: 9184 pixel sang, 14368 pixel vet mo -> work/vga_frame.ppm
+PASS vga_digits_tb 7
+tb/vga_digits_tb.v:139: $finish called at 65760671000 (1ps)
+PASS system_tb (USE_IRQ = 0) 589
+OK   all27        vs MARS         lenh=87     chu_ky_CPU=151    CPI=1.74
+OK   bcd          rieng (expect)  lenh=320    chu_ky_CPU=455    CPI=1.42
+OK   cp0          rieng (expect)  lenh=16     chu_ky_CPU=16     CPI=1.00
+OK   fact10       vs MARS         lenh=122    chu_ky_CPU=122    CPI=1.00
+OK   hazard       vs MARS         lenh=16     chu_ky_CPU=16     CPI=1.00
+OK   irq          rieng (expect)  lenh=155    chu_ky_CPU=187    CPI=1.21
+OK   irq_bcd      rieng (expect)  lenh=82     chu_ky_CPU=622    CPI=7.59
+OK   irq_lu       rieng (expect)  lenh=103    chu_ky_CPU=103    CPI=1.00
+OK   mmio         rieng (expect)  lenh=15     chu_ky_CPU=15     CPI=1.00
+OK   sum100       vs MARS         lenh=304    chu_ky_CPU=304    CPI=1.00
+OK   unaligned    rieng (expect)  lenh=6      chu_ky_CPU=6      CPI=1.00
+OK   rand01       vs MARS         lenh=321    chu_ky_CPU=705    CPI=2.20
+OK   rand02       vs MARS         lenh=300    chu_ky_CPU=556    CPI=1.85
+OK   rand03       vs MARS         lenh=315    chu_ky_CPU=539    CPI=1.71
+OK   rand04       vs MARS         lenh=318    chu_ky_CPU=542    CPI=1.70
+OK   rand05       vs MARS         lenh=299    chu_ky_CPU=651    CPI=2.18
+OK   rand06       vs MARS         lenh=309    chu_ky_CPU=757    CPI=2.45
+OK   rand07       vs MARS         lenh=317    chu_ky_CPU=605    CPI=1.91
+OK   rand08       vs MARS         lenh=311    chu_ky_CPU=759    CPI=2.44
+PASS cosim_mars 19
+PASS pytest_tools 95 passed, 1 skipped in 20.12s
+OK   all27                                    87 dong trace,    0 ngat
+OK   bcd                                     320 dong trace,    0 ngat
+OK   cp0                                      16 dong trace,    0 ngat
+OK   fact10                                  122 dong trace,    0 ngat
+OK   hazard                                   16 dong trace,    0 ngat
+OK   irq                                     160 dong trace,    5 ngat
+OK   irq_bcd                                  83 dong trace,    1 ngat
+OK   irq_lu                                  104 dong trace,    1 ngat
+OK   mmio                                     15 dong trace,    0 ngat
+OK   sum100                                  304 dong trace,    0 ngat
+OK   unaligned                                 6 dong trace,    0 ngat
+OK   rand01                                  315 dong trace,    0 ngat
+OK   rand02                                  309 dong trace,    0 ngat
+OK   rand03                                  315 dong trace,    0 ngat
+OK   rand04                                  316 dong trace,    0 ngat
+OK   rand05                                  300 dong trace,    0 ngat
+OK   rand06                                  310 dong trace,    0 ngat
+OK   rand07                                  311 dong trace,    0 ngat
+OK   rand08                                  312 dong trace,    0 ngat
+OK   soc_bus (fw/tests/soc/bus.s)           2584 dong trace,    0 ngat
+OK   soc_clock (fw/demo/clock.s)          263682 dong trace,   10 ngat
+OK   soc_irqlat (fw/tests/soc/irq_lat.s)      262 dong trace,   12 ngat
+OK   soc_uart (fw/tests/soc/uart.s)          727 dong trace,    0 ngat
+OK   fmt_bench (fw/fmt.s)                    306 dong trace,    0 ngat
+OK   system (fw/main.s)                   280528 dong trace,  207 ngat
+PASS cosim_iss 25
+EXIT 0

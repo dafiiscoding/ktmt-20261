@@ -1,0 +1,30 @@
+# mô phỏng
+*.cf
+*.o
+*.vcd
+*.ghw
+work/*
+# chỉ đưa file demo (còn lại trong work/ là sản phẩm trung gian, tái tạo được bằng tools/run_*.sh)
+!work/demo_tuong_tac.html
+!work/demo_system.gif
+!work/screen_system.log
+!work/screen_soc_clock.log
+# build LaTeX: chỉ giữ bản PDF
+report/latex/build/*
+!report/latex/build/main.pdf
+# tổng hợp
+*.jou
+*.str
+.Xil/
+db/
+incremental_db/
+output_files/
+# python
+__pycache__/
+# ghi chú riêng của Long (không đưa lên repo nhóm)
+.ai/
+# công cụ portable (tools/setup_env.sh)
+.toolchain/
+# ModelSim sinh ra
+modelsim.ini
+transcript

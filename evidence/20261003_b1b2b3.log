@@ -1,0 +1,165 @@
+# 20261003_b1b2b3 — B1 asm.py, B2 iss.py, B3 cmp_trace.py, cosim RTL<->ISS tung lenh (Claude, Long chon A)
+# ngay: 2026-10-03 · may Long · Python 3.14.2 · Icarus Verilog runtime version 14.0 (devel) (s20260301-500-g2e81fcccb-dirty)
+
+## sha1
+3f16fa2d95936856f16e06860ae0123fe887495a *tools/asm.py
+44a2ced5f8d6f734377bdc54bc55ec1eaacbdd90 *tools/iss.py
+991b0a51d0a8c77405c8d9b56a35b11fcb700123 *tools/cmp_trace.py
+3362c3d1e428f1d432c7d7418acc2cb3614396b0 *tools/cosim_iss.py
+0354041e088f783c202f16d4844759fc9881516b *tools/cosim_mars.py
+44282d82de7d083ccc84e092340c5568df05dcc0 *tools/fw_build.py
+d5d65327a967451648c5f4e85e4440e7235b0b33 *tools/run_unit.sh
+51f875c730b5fe2921d3df4307ca8403b01b6b4a *tools/test_asm.py
+e3f46ac9a3926224f62059ab0b2da673638919ff *tools/test_iss.py
+77a3174a56de67157335d64abe2043f8e4471f3f *tools/test_cmp_trace.py
+f00edf631ac49ff8df9a4082bc6a3e657ae56642 *fw/tests/asm/all28.s
+d7d853cba56396a17b590f410ed6a4b3327e68d7 *fw/main.s
+ab674eb85b3b8670c6e29e57791be056f631184f *tb/system_tb.v
+d1d336d1e963e63ef5cdb225b2a18a17ae5f7a0f *tb/soc_bus_tb.v
+0083922f2560659280decffb88b60f8d7bb3f3c6 *tb/soc_clock_tb.v
+030ff88fd5c588a3c79dffd8a0b44c0116d33d59 *tb/soc_irqlat_tb.v
+3a71474f1015b30e4bff12dddde599defc9d9bec *src/alu.v
+0a10256f89a4c49f0a68ed695f787b4ec88c1ee5 *src/bcd_unit.v
+dd558159ab009c3396bc62bdc5e815a2480b87b5 *src/beeper.v
+bd2533859af150d7142b51aa87cb25c383c8d1ea *src/buttons.v
+a326e2c2ef6b2b51caf37ece14d991d638af9b2e *src/char_rom.v
+3d964cfa71f324c0ad7c2bcdfc3970c9c3585696 *src/control.v
+025d4ce2e6ba5f40e5b5c92f0f2cbd01d532f629 *src/cpu_g1.v
+b88a6337870c8bade2fa5e0b1f311c2d64ff3664 *src/display_ctrl.v
+3de14d5218ecb834b7748b10d4e8923f38d7a8d7 *src/irq_ctrl.v
+9991def613c9e537ee44e269c121495d1ee6562d *src/muldiv.v
+0fecdb6345cec887a2761cc10b8dd61774d3c95d *src/regfile.v
+7484d57c2bb7857ade0c926d3a88f7299bd6f7dd *src/seg7_scan.v
+7a68dcd0a29839b8654b645d4a028ef77d43e3d8 *src/soc_regs.v
+103e845cb22d76e1cd35464c32c9dbed99d41623 *src/soc_top.v
+09fde188f737a89335d02cf97a248a67b623aebe *src/timebase.v
+c7b0f22f10f8d6a4994b7df6199e2c5842eed182 *src/timers.v
+
+## hoi quy day du: bash tools/run_unit.sh (work/regress_20261003c.log)
+PASS alarm_tb 15
+PASS alu_tb 4200
+PASS bcd_tb 112537
+PASS beeper_tb 15
+PASS buttons_tb 20
+PASS cdtimer_tb 20
+PASS clock_demo_tb 75
+PASS control_tb 82646
+PASS display_ctrl_tb 54
+PASS irq_tb 12
+PASS muldiv_tb 5806
+PASS regfile_tb 2040
+PASS rtc_tb 22
+PASS seg7_tb 25362
+PASS soc_bus_tb 20
+PASS soc_clock_tb 24
+PASS soc_irqlat_tb 5
+PASS stopwatch_tb 34
+PASS sys_0 ham mong doi cua tb khop fmt_*.txt, date.txt
+PASS sys_1 nua dem, ngay/thu, 12h, giay.ms, trang ngay
+PASS sys_2 stopwatch 1234 ms
+PASS sys_3 lap x3 dung thu tu
+PASS sys_4 timer ve 0 dung ms, chuong, so am
+PASS sys_5 bao thuc, snooze, tu tat, Chu nhat, chuong gio, sua gio
+PASS sys_6 SET: nhay, 23+1 -> 0, luu, ngay/thu, kep ngay
+PASS system_tb 565
+PASS timebase_tb 693
+PASS cosim_mars 17
+PASS pytest_tools 65 passed, 1 skipped in 9.53s
+PASS cosim_iss 21
+real	5m17.345s
+exit=0
+
+## cosim_iss chi tiet (trong regress)
+OK   all27        vs MARS         lenh=87     chu_ky_CPU=151    CPI=1.74
+OK   bcd          rieng (expect)  lenh=320    chu_ky_CPU=455    CPI=1.42
+OK   cp0          rieng (expect)  lenh=16     chu_ky_CPU=16     CPI=1.00
+OK   fact10       vs MARS         lenh=122    chu_ky_CPU=122    CPI=1.00
+OK   hazard       vs MARS         lenh=16     chu_ky_CPU=16     CPI=1.00
+OK   irq          rieng (expect)  lenh=155    chu_ky_CPU=187    CPI=1.21
+OK   mmio         rieng (expect)  lenh=15     chu_ky_CPU=15     CPI=1.00
+OK   sum100       vs MARS         lenh=304    chu_ky_CPU=304    CPI=1.00
+OK   unaligned    rieng (expect)  lenh=6      chu_ky_CPU=6      CPI=1.00
+OK   rand01       vs MARS         lenh=321    chu_ky_CPU=705    CPI=2.20
+OK   rand02       vs MARS         lenh=300    chu_ky_CPU=556    CPI=1.85
+OK   rand03       vs MARS         lenh=315    chu_ky_CPU=539    CPI=1.71
+OK   rand04       vs MARS         lenh=318    chu_ky_CPU=542    CPI=1.70
+OK   rand05       vs MARS         lenh=299    chu_ky_CPU=651    CPI=2.18
+OK   rand06       vs MARS         lenh=309    chu_ky_CPU=757    CPI=2.45
+OK   rand07       vs MARS         lenh=317    chu_ky_CPU=605    CPI=1.91
+OK   rand08       vs MARS         lenh=311    chu_ky_CPU=759    CPI=2.44
+OK   all27                                    87 dong trace,    0 ngat
+OK   bcd                                     320 dong trace,    0 ngat
+OK   cp0                                      16 dong trace,    0 ngat
+OK   fact10                                  122 dong trace,    0 ngat
+OK   hazard                                   16 dong trace,    0 ngat
+OK   irq                                     160 dong trace,    5 ngat
+OK   mmio                                     15 dong trace,    0 ngat
+OK   sum100                                  304 dong trace,    0 ngat
+OK   unaligned                                 6 dong trace,    0 ngat
+OK   rand01                                  315 dong trace,    0 ngat
+OK   rand02                                  309 dong trace,    0 ngat
+OK   rand03                                  315 dong trace,    0 ngat
+OK   rand04                                  316 dong trace,    0 ngat
+OK   rand05                                  300 dong trace,    0 ngat
+OK   rand06                                  310 dong trace,    0 ngat
+OK   rand07                                  311 dong trace,    0 ngat
+OK   rand08                                  312 dong trace,    0 ngat
+OK   soc_bus (fw/tests/soc/bus.s)           2584 dong trace,    0 ngat
+OK   soc_clock (fw/demo/clock.s)          263682 dong trace,   10 ngat
+OK   soc_irqlat (fw/tests/soc/irq_lat.s)      262 dong trace,   12 ngat
+OK   system (fw/main.s)                   236746 dong trace,    0 ngat
+
+## firmware hoi quy: asm.py == MARS tung word
+fw/tests/soc/bus.s 249 · fw/demo/clock.s 69 · fw/tests/soc/irq_lat.s 24 · fw/main.s 761 word khac 0 -> GIONG MARS (fw_build --mars vs work/<tb>.hex)
+
+## dot bien
+### ISS + RTL (work/mut_iss_20261003.log)
+ISS slt khong dau            BAT  all27,rand01,rand02,rand03,rand04,rand05
+ISS sra logic                BAT  all27,rand01,rand02,rand03,rand04,rand05
+ISS EPC = lenh vua xong      BAT  irq,soc_clock,soc_irqlat
+ISS eret khong xoa EXL       BAT  all27,cp0,irq,soc_clock,soc_irqlat
+ISS bcd nguong 99999998      BAT  bcd
+ISS chia 0: HI = 0           BAT  rand01,rand03,rand04,rand05,rand06,rand07
+ISS mul ghi LO               BAT  all27,fact10,rand02,rand03,rand05,rand06
+ISS lw khong bo 2 bit        BAT  mmio,unaligned
+ISS jal = pc + 8             BAT  all27,cp0,fact10,hazard,irq,soc_clock
+ISS mtc0 Status chi bit 0    BAT  all27,cp0
+ISS 0x80000000/-1 thuong     BAT  all27
+ISS replay Cause = 0         BAT  irq
+RTL chia 0: HI = 0           BAT  rand01,rand03,rand04,rand05,rand06,rand07
+RTL EPC = pc                 BAT  irq,soc_clock,soc_irqlat
+RTL ngat ngay sau mtc0       BAT  irq
+RTL eret khong xoa EXL       BAT  all27,cp0,irq,soc_clock,soc_irqlat
+RTL mtc0 Status chi bit 0    BAT  all27,cp0
+RTL jal = pc + 8             BAT  all27,cp0,fact10,hazard,irq,soc_clock
+RTL Cause dat sai bit        BAT  irq
+RTL mfhi doc LO              BAT  all27,irq,rand01,rand02,rand03,rand04
+bat 20/20
+iss.py khoi phuc: True
+restored_ok
+### asm.py (work/mut_asm_20261003.log)
+bcd dat rs vao rt        BAT  1 failed in 0.38s
+nhanh tinh tu pc         BAT  1 failed in 0.36s
+khong kiem tam nhanh     BAT  1 failed, 40 passed, 1 skipped in 11.72s
+khong bao nhan trung     BAT  1 failed, 15 passed, 1 skipped in 11.54s
+li 0xffffffff = lui+ori  BAT  1 failed in 0.40s
+la 1 lenh khi nho        BAT  1 failed in 0.41s
+mtc0 ma rs = 0           BAT  1 failed in 0.40s
+andi co dau              BAT  1 failed in 0.43s
+loi van ghi file         BAT  1 failed, 37 passed, 1 skipped in 11.31s
+khong canh bao 900       BAT  1 failed, 39 passed, 1 skipped in 12.47s
+bat 10/10
+restored_ok
+### cmp_trace.py (work/mut_cmp_20261003.log)
+so ca cot cycle        BAT  4 failed, 1 passed in 0.57s
+dong lech dem tu 0     BAT  2 failed, 3 passed in 0.51s
+bo qua do dai          BAT  1 failed, 4 passed in 0.50s
+bo qua cot mdata       BAT  1 failed, 4 passed in 0.50s
+replay bo loi ngat     BAT  1 failed, 4 passed in 0.49s
+so tu dong 2           SONG  5 passed in 0.26s
+bat 5/6
+restored_ok
+so tu dong 2 (chay lai sau khi them test_first_and_last_line): BAT -> 6/6
+
+## them: cosim_iss --rand 30 -> PASS cosim_iss 43 (chay 03/10 truoc dot bien, cung code iss.py/cosim_iss.py)
+## RTL Cause dat sai bit: trace van khop (replay lay Cause tu RTL), bat boi '# expect' irq.s: $v0=0x7f, ISS 0000007b

@@ -1,0 +1,8 @@
+# 2026-10-01 22:52 · Icarus Verilog version 14.0 (devel) (s20260301-500-g2e81fcccb-dirty)
+# lenh: bash tools/run_unit.sh regfile
+# nguon: src/regfile.v tb/regfile_tb.v
+# sha1 0fecdb6345cec887a2761cc10b8dd61774d3c95d *src/regfile.v
+# sha1 3d2615ce2ae570c6f382e436a857fc47c0f14d08 *tb/regfile_tb.v
+PASS regfile_tb 2040
+tb/regfile_tb.v:91: $finish called at 20160000 (1ps)
+# exit=0

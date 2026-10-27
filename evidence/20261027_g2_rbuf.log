@@ -1,0 +1,23 @@
+OK   all27                                    87 dong trace,    0 ngat
+OK   bcd                                     320 dong trace,    0 ngat
+OK   cp0                                      16 dong trace,    0 ngat
+OK   fact10                                  122 dong trace,    0 ngat
+OK   hazard                                   16 dong trace,    0 ngat
+OK   irq                                     160 dong trace,    5 ngat
+OK   irq_bcd                                  83 dong trace,    1 ngat
+OK   irq_lu                                  104 dong trace,    1 ngat
+OK   mmio                                     15 dong trace,    0 ngat
+OK   sum100                                  304 dong trace,    0 ngat
+OK   unaligned                                 6 dong trace,    0 ngat
+OK   bcd_busy                                  9 dong trace,    0 ngat
+OK   branch                                   13 dong trace,    0 ngat
+OK   cp0                                       9 dong trace,    0 ngat
+OK   jump                                     10 dong trace,    0 ngat
+OK   load_use                                 17 dong trace,    0 ngat
+OK   mmio_once                                 9 dong trace,    0 ngat
+OK   multi                                    13 dong trace,    0 ngat
+OK   raw_chain                                11 dong trace,    0 ngat
+OK   zero_reg                                  7 dong trace,    0 ngat
+OK   system (fw/main.s)                   340062 dong trace,  223 ngat
+PASS cosim_iss 21
+exit 0

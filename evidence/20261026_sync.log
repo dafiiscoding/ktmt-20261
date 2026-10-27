@@ -1,0 +1,28 @@
+# 2026-10-26 — Gói E6 sync UART (fw/main.s mục "đồng bộ giờ") + kịch bản 7 system_tb + SY-1/SY-2 + IMEM soc_top 2048
+
+## Hồi quy đầy đủ: bash tools/run_unit.sh (log work/regress_20261026_sync.log) → EXIT=0
+25 tb PASS (system_tb 586 = 565 cũ + sys_7 + check thêm), cosim_mars 19, pytest_tools 91 passed 1 skipped, cosim_iss 25
+G2: python tools/cosim_iss.py --g2 --rand 0 → PASS 21 (system fw/main.s 313 714 dòng trace, gồm sys_7)
+Lint: verilator_bin --lint-only -Wall src/*.v --top-module soc_top → sạch
+
+## Kịch bản 7 (G1): $Z ở sys_4: ms 12005 (ZERO ở ms 12000) · $Q: LF vào FIFO ms 54149910, $R trả 54149917
+  (trễ = 1 vòng chính ở G_N = 50, D = 2 ≈ 25 lệnh/ms; chip thật G_N = 50 000 nhỏ hơn ~1000 lần — inference, chưa đo)
+  CAL: +72/1 h → 65 500 · −72/1 h → 0 · D 858 994 → bỏ · I 300 000 → bỏ · 6 h qua nửa đêm +432 → 65 500
+  5 câu sai (checksum, hex thường, thiếu $, ms quá ngày, > 32 byte) → không đặt giờ, không trả lời
+
+## Kích thước
+main.s 856 → 1 093 lệnh (vượt IMEM 1024) → soc_top G_IMEM_AW 11 (isa-spec §7). Yosys G1 -run :map_ffs: 15 442 → 16 303 ô
+(+861), vẫn 1 RAMB36E1 + 10 RAM32M + 4 DSP (log work/yosys_soc_top_G1_20261026_sync.log). IMEM nhiều khả năng thành
+ROM bằng logic trong luồng này, không vào BRAM — inference, chưa kiểm netlist.
+MARS: test_b1_2 main.s so cấu hình Default (đích j/jal − 0x100000) → khớp 1 093 word.
+
+## Bổ sung sau vòng 3: chặn |CAL| ≤ 655 360 (timer-spec §2) — +8 lệnh (main.s 1 101 lệnh)
+test_e6_sy2_edges thêm 4 ca (600 000 + 65 500 → 655 360, đối xứng âm, biên 589 860 / 589 859). Đột biến: biên 0xB0000 bắt,
+bỏ chặn dưới bắt, "≥ thay >" tương đương (chặn 655 360 về 655 360). Hồi quy lại EXIT=0, cosim_iss --g2 PASS 21.
+
+## Đột biến firmware (bản đúng: scratchpad main_sync_ok.s)
+ISS (pytest -k e6): 20/20 bị bắt. Lần đầu 12/18 → lọt M7 (bỏ kiểm '$'), M9 (số ngày không cần dừng ở '*'),
+  M10 (số ms không cần dừng ở ','), M12 (nhận 10 chữ số), M15 (bỏ I > 86 400 000), M16 (B2 sang ngày sau)
+  → sync_sentences/sync_cal không có ca nào phân biệt → thêm test_e6_sy1_bad_shapes + test_e6_sy2_edges (+M19, M20).
+  Tương đương (không quan sát được): đánh dấu tràn 33 thay 32 — câu hợp lệ dài nhất 25 byte nên 32 byte đầu không thể hợp lệ.
+RTL (system_tb): R1 ×51 thay ×50 → FAIL sys_7 (2 lỗi CAL) · R2 không bỏ số 0 đầu → FAIL $Z, $R · R3 không gửi $Z → FAIL sys_7

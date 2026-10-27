@@ -1,0 +1,36 @@
+# 2026-10-26 — Gói D4 UART (src/uart.v, tb/uart_tb.v, fw/tests/soc/uart.s + tb/soc_uart_tb.v, nối soc_top)
+
+## Hồi quy đầy đủ: bash tools/run_unit.sh  (log đầy đủ work/regress_20261026_uart.log)
+21 tb đơn vị/SoC PASS (thêm uart_tb 28, soc_uart_tb 9), system_tb 565, cosim_mars 19,
+pytest_tools 77 passed 1 skipped, cosim_iss 24  → EXIT=0
+(sau đó firmware uart.s thêm dấu xong −108: chạy lại uart soc_bus soc_clock soc_irqlat soc_uart → PASS;
+ python tools/cosim_iss.py --soc-only → PASS 5, soc_uart 727 dòng trace)
+
+## G2
+python tools/cosim_iss.py --g2 --rand 0 → PASS 21 (system chạy -DG2 với soc_top có uart)
+iverilog -DG2 tb/soc_uart_tb.v ... + work/soc_uart.hex → PASS soc_uart_tb 9 (v0 = 3f, 6 khung)
+
+## Lint
+verilator_bin --lint-only -Wall src/*.v --top-module soc_top → sạch
+
+## Đột biến src/uart.v (bản sao trong scratchpad, chạy tb/uart_tb.v) — 15/15 bị bắt
+M1  đảo thứ tự bit TX (tsh[1])               FAIL 4/28
+M2  HALF = 1 (lấy mẫu ở mép bit)              FAIL 6/28
+M3  FIFO đầy vẫn ghi đè                       FAIL 6/28
+M4  không bật FRAME_ERR                       FAIL 2/28
+M5  TX_READY luôn 1                           FAIL hết giờ (tb có watchdog)
+M6  bỏ kiểm start ở G_BIT/2 (nhiễu thành byte) FAIL 6/28
+M7  không kiểm bit stop                       FAIL 5/28
+M8  tx_ev không bao giờ bật                   FAIL 2/28
+M9  ghi 1 không xóa RX_OVF                    FAIL 2/28
+M10 ghi khi đầy vẫn ghi đè bộ đệm             FAIL 1/28
+M11 lệnh xóa thắng sự kiện RX_OVF             FAIL 2/28   (lần đầu LỌT → thêm ca clr_at_stop)
+M11b lệnh xóa thắng sự kiện FRAME_ERR         FAIL 2/28
+M12 phát 2 bit stop                           FAIL 1/28   (lần đầu LỌT → thêm đo khoảng cách 2 khung)
+M13 thêm 1 chu kỳ nghỉ giữa 2 khung           FAIL 1/28   (đây là lỗi thật của bản đầu, đã sửa)
+M14 đọc UART_RX khi rỗng vẫn lùi con trỏ      FAIL 8/28
+
+## Yosys (cùng lệnh 21/10: synth_xilinx -flatten -run :map_ffs, IMEM = work/main.hex)
+soc_top G1: 15 442 ô (21/10: 14 958; +484 do uart), 4 DSP48E1, 1 RAMB36E1, 10 RAM32M  (work/yosys_soc_top_G1_20261026.log)
+uart riêng (-run :map_ffs): 116 FF, 3 RAM64M (FIFO 64 byte = RAM phân tán), 16 CARRY4, 0 BRAM, 0 DSP (work/yosys_uart_20261026_ffs.log)
+synth_xilinx đầy đủ cho uart: ABC9 assert lỗi (vecInt.h:448) → chưa có số LUT; bản Yosys này không có -noabc9.

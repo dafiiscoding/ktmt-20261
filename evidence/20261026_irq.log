@@ -1,0 +1,22 @@
+# 2026-10-26 — sync UART chuyển sang ngắt UART_RX (fw/main.s USE_IRQ = 1)
+
+## Thiết kế
+handler 0x180: cất $t0–$t2 (DMEM 0x540…0x548), $ra → $k1; ghi IRQ_PENDING = 0x40 TRƯỚC khi lấy byte; jal sy_rx; khôi phục; eret.
+sy_rx: V_SRDY = 1 → về ngay (byte nằm lại FIFO); không thì lấy byte tới FIFO rỗng / '\n' (chụp MS_OF_DAY, DAY_SHADOW, V_SRDY = 1).
+sync (vòng chính): tắt IE → sy_rx (vét byte handler để lại; USE_IRQ = 0 là polling) → bật IE = USE_IRQ → V_SRDY thì xử lý câu,
+  xong xóa V_SLEN, V_SRDY, lặp lại. Boot: IRQ_ENABLE = USE_IRQ << 6.
+3 cặp đọc MS_OF_DAY → DAY_SHADOW (set_in, ringchk, dr_tm) bọc mtc0 tắt/bật: handler đọc MS_OF_DAY sẽ chụp lại DAY_SHADOW.
+main.s 1 101 → 1 136 lệnh.
+
+## Kết quả
+Hồi quy đầy đủ work/regress_20261026_irq.log: 26 tb PASS, cosim_mars 19, pytest 92 passed 1 skipped, cosim_iss 25 → EXIT=0
+  (cosim_iss system fw/main.s: 272 208 dòng trace, 208 ngắt, khớp ISS từng lệnh)
+G2: cosim_iss --g2 --rand 0 → PASS 21
+sys_7 $Q: G1 LF vào FIFO ms 54 149 907, $R 54 149 907 · G2 LF 54 149 914, $R 54 149 915 (trước: polling G1 +7 ms)
+  → cửa sổ kiểm $R: [ms_nl − 1, ms_nl + 1] (1 ms = 50 chu kỳ ở G_N = 50)
+
+## Đột biến
+RTL system_tb: USE_IRQ = 0 → FAIL (G1 và G2) · không xóa PENDING → FAIL 13 lỗi (handler chạy lại liên tục) · không xóa V_SRDY → FAIL 10 lỗi
+  · xóa PENDING SAU khi lấy byte → PASS (lọt): cửa sổ race vài chu kỳ, byte rơi vào đó vẫn được sync vét ở vòng kế → chỉ mất chính xác.
+ISS test_e6_irq_handler_saves_registers (803 ngắt, 1 byte/ngắt, LF mỗi 16 byte; so 30 thanh ghi ở mỗi eret):
+  bỏ khôi phục $t0 / $t1 / $t2 / $ra, handler ghi $t9 → 5/5 FAIL. Bản đầu của test (FIFO rỗng) để lọt "bỏ khôi phục $t2" → đổi sang có byte.

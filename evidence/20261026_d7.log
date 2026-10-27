@@ -1,0 +1,17 @@
+# 2026-10-26 — D7 màn ảo: so tự động ảnh từ chân an/seg/dp trong system_tb
+
+## Cách so
+tb/screen_dump.v: thêm `event round` (bắn mỗi vòng quét 8 khe, sau khi frame/lit cập nhật). Không đổi file log.
+tb/system_tb.v: u_scr (G_SLOT 40, rst = dut.rst) → work/screen_system.log. sdirty = 1 khi disp / blink_mask / blink_ph /
+  bright đổi; ở mỗi round, nếu sdirty = 0: với mỗi ô i, sl = BRIGHT ≠ 0 && !(BLINK_MASK[i] && blink_ph),
+  mong = sl ? {dp, seg7.txt[mã]} : 00; so frame[i] và lit[i]. Cuối: check(nscr > 1000 && sai = 0).
+sys_6: chờ 600 ms ở SET (giờ nháy 0x30) → check có vòng ô tắt và cuối cùng 8 ô sáng.
+
+## Kết quả (work/regress_20261026_d7.log): EXIT=0; system_tb 588 (+2 check); G2 cosim_iss --g2 --rand 0 PASS 21
+D7: 1 677 vòng quét được so, 38 vòng có chữ số tắt (lit = cf: ô 5, 4), 0 sai. python tools/screen.py work/screen_system.log đọc được.
+
+## Đột biến RTL (scratchpad mut_d7.py; khôi phục + cmp)
+char_rom mã 3 4F→4E: 654 vòng sai · anode đảo thứ tự: 11 174 · dp lấy cur[6]: 1 621 · nháy ngược pha: 494 (+ sys_6) → 4/4 FAIL.
+
+## Lỗi có sẵn, không sửa
+python tools/screen.py -h → UnicodeEncodeError (help tiếng Việt, console cp1252). Chạy bình thường không sao.

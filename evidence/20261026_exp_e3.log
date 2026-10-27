@@ -1,0 +1,12 @@
+# 2026-10-26 — E3 polling vs ngắt vs capture (tools/exp_e3.py --n 1000; tb/exp_e3_tb.v; fw/exp/e3_poll.s, e3_irq.s)
+# Mọi ca PASS exp_e3_tb (5 kiểm: đủ 1000 xung/MS/lap/BTN_EVENT, lap = SW lúc nhấn, stamp = MS lúc nhấn). CSV từng lần: work/exp_e3/*.csv
+# Kiểm tay D=1526: ngắt min 1,005 lệnh, max 33,99 lệnh (div 33 chặn); polling max 44,5 lệnh (vòng 41); TB đo 466/740 µs vs dự đoán 451/717 µs.
+| D | Tốc độ G1 (board) | Cách | n | Trễ min / TB / max (µs ở board) | Sai số TB (ms, board, ước tính) |
+|---|---|---|---|---|---|
+| 2 | 25000.0 k lệnh/s | polling | 1000 | 0.18 / 0.99 / 1.80 | 0.001 |
+| 2 | 25000.0 k lệnh/s | ngắt | 1000 | 0.08 / 0.64 / 1.38 | 0.001 |
+| 100 | 500.0 k lệnh/s | polling | 1000 | 7.04 / 47.41 / 88.94 | 0.047 |
+| 100 | 500.0 k lệnh/s | ngắt | 1000 | 2.04 / 31.05 / 67.96 | 0.031 |
+| 1526 | 32.8 k lệnh/s | polling | 1000 | 108.24 / 740.44 / 1358.12 | 0.740 |
+| 1526 | 32.8 k lệnh/s | ngắt | 1000 | 30.68 / 466.40 / 1037.28 | 0.466 |
+| mọi D | | capture lap / dấu BTN_EVENT | 1000 mỗi ca | 0 (chụp đúng chu kỳ nhấn) | 0 |

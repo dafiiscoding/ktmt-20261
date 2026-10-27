@@ -1,0 +1,22 @@
+\chapter{GIỚI THIỆU}
+
+\section{Mô tả dự án và yêu cầu bài toán}
+\subsection{Tên đề tài và mục tiêu}
+\TODO{Long. Tên đề tài; mục tiêu dạng gạch đầu dòng (G1 đơn chu kỳ, G2 pipeline, SoC đồng hồ: timers, hiển thị, ngắt, UART đồng bộ giờ).}
+\subsection{Đồng hồ điện tử thật làm gì}
+\TODO{Long. Casio module 593 (F-91W), DS3231, timer MCU STM32. Đặt câu hỏi xuyên suốt: ``chuẩn tới ms thì phần nào phải là phần cứng?'' — được trả lời ở mục~\ref{sec:thi-nghiem}.}
+\subsection{Yêu cầu hệ thống}
+\TODO{Long. Yêu cầu ISA, datapath, hazard, ngoại vi, công cụ. Nguồn: \texttt{PLAN\_DONG\_HO.md}, \texttt{docs/goi-viec.md}.}
+
+\section{Cơ sở lý thuyết: kiến trúc tập lệnh MIPS}
+\subsection{Tổng quan MIPS ISA}
+\subsection{Tập thanh ghi}
+\subsection{Định dạng lệnh và 28 lệnh được hỗ trợ}
+\TODO{Bảng 28 lệnh lấy đúng \texttt{docs/isa-spec.md} (kể cả SPECIAL2, CP0).}
+
+\section{Cơ sở thiết kế}
+\subsection{CPU đơn chu kỳ}
+\subsection{Kỹ thuật đường ống (pipelining)}
+\subsection{Các loại xung đột và kỹ thuật xử lý}
+\subsection{Ngắt và CP0}
+\TODO{Chương 1 là chỗ DUY NHẤT được dùng hình từ sách; mỗi hình ghi ``nguồn: P\&H Fig x.y''.}

@@ -1,0 +1,31 @@
+# 2026-10-02 10:46 · Icarus Verilog version 14.0 (devel) (s20260301-500-g2e81fcccb-dirty)
+# lenh: bash tools/run_unit.sh clock_demo
+# sha1 09fde188f737a89335d02cf97a248a67b623aebe *src/timebase.v
+# sha1 a40904ff2013b5b9986ccca0c320f9315c800e04 *src/timers.v
+# sha1 b88a6337870c8bade2fa5e0b1f311c2d64ff3664 *src/display_ctrl.v
+# sha1 7484d57c2bb7857ade0c926d3a88f7299bd6f7dd *src/seg7_scan.v
+# sha1 a326e2c2ef6b2b51caf37ece14d991d638af9b2e *src/char_rom.v
+# sha1 e9fc92dce3a59601d3403662809692215a54f99f *tb/screen_dump.v
+# sha1 20500f40150d53b1f5f4400d71d47d907c0fd044 *tb/clock_demo_tb.v
+man ao: 17 anh, ket thuc o ms_of_day = 5019
+PASS clock_demo_tb 75
+tb/clock_demo_tb.v:157: $finish called at 10361030000 (1ps)
+# exit=0
+# python tools/screen.py work/screen_clock.log  (man ao, tu clock_demo_tb)
+t=      6 ms |             
+t=    307 ms |   23.59.55  
+t=    556 ms |     59.55   
+t=    806 ms |   23.59.55  
+t=   1056 ms |     59.55   
+t=   1305 ms |   23.59.55  
+t=   1331 ms |   23.59.56  
+t=   2329 ms |   23.59.57  
+t=   3328 ms |   23.59.58  
+t=   4332 ms |   23.59.59  
+t=   5324 ms |   00.09.59    <- xe hinh (ghi do, 1 vong quet)
+t=   5331 ms |   00.00.00  
+t=   6329 ms |   00.00.01  
+t=   7328 ms |   00.00.02  
+t=   8332 ms |   00.00.03  
+t=   9331 ms |   00.00.04  
+t=  10329 ms |   00.00.05  

@@ -1,0 +1,84 @@
+# Vá hở (stopwatch va chạm, BTN thang thật, D3 beeper, C5-5 D=1526) + C8 system_tb 1–6 + fw/main.s — 03/10/2026 (Claude, Long: "sửa hết hở chưa rồi thì A")
+## sha1
+c7b0f22f10f8d6a4994b7df6199e2c5842eed182 *src/timers.v
+bd2533859af150d7142b51aa87cb25c383c8d1ea *src/buttons.v
+dd558159ab009c3396bc62bdc5e815a2480b87b5 *src/beeper.v
+103e845cb22d76e1cd35464c32c9dbed99d41623 *src/soc_top.v
+43081f0b558933730b27d69b770cf6285b5038ab *tb/stopwatch_tb.v
+3213f29560032e8a1f1ec846de3c8659e421adb3 *tb/buttons_tb.v
+b7911a8015a570e501f4260da0bfe91262f4bf5a *tb/beeper_tb.v
+32c7a239b98c03d73b5d30983fb514c9f24d91ca *tb/soc_bus_tb.v
+9ba37b32371d12ac3aa7cf80a919582abaa65fe3 *tb/soc_clock_tb.v
+ac45b7508e8379941aab1840bb0abccf8b4f76b3 *tb/soc_irqlat_tb.v
+04c15c1933467d3f2871722009c2959f6ac3290a *tb/system_tb.v
+d7d853cba56396a17b590f410ed6a4b3327e68d7 *fw/main.s
+ba8b818237621f4217d7740053909136492d2bf7 *fw/tests/soc/irq_lat.s
+4ff7cbf13987a3f0972f43b86bca4676cc56449b *fw/tests/soc/bus.s
+## regression: bash tools/run_unit.sh (exit 0, 3m27s) — work/regress_20261003b.log
+PASS alarm_tb 15
+PASS alu_tb 4200
+PASS bcd_tb 112537
+PASS beeper_tb 15
+PASS buttons_tb 20
+PASS cdtimer_tb 20
+PASS clock_demo_tb 75
+PASS control_tb 82646
+PASS display_ctrl_tb 54
+PASS irq_tb 12
+PASS muldiv_tb 5806
+PASS regfile_tb 2040
+PASS rtc_tb 22
+PASS seg7_tb 25362
+PASS soc_bus_tb 20
+PASS soc_clock_tb 24
+PASS soc_irqlat_tb 5
+PASS stopwatch_tb 34
+PASS system_tb 559
+PASS timebase_tb 693
+PASS cosim_mars 17
+(system_tb sau đó thêm 6 kiểm tra — sửa giờ báo thức, 12 h buổi chiều — chạy lại: PASS system_tb 565)
+## system_tb (bash tools/run_unit.sh system)
+/usr/bin/bash: line 20: vvp: command not found
+## BTN thang that (+slow, G_N = 50000) — work/buttons_slow_20261003.log
+PASS buttons_tb 24
+## C5-5
+C5-5 D = 1526: vong 1 lenh min 1795 max 2963; vong div min 2417 max 43261 chu ky he thong
+## đột biến firmware main.s → system_tb — work/mut_fw_20261003.log
+snooze 4 phut                KILLED  sys_5,sys_6
+bo bu 2100                   KILLED  sys_1
+nhuan sai (mod 8)            KILLED  sys_1
+12h: 0h khong thanh 12       KILLED  sys_1
+blink phut sai               KILLED  sys_6
+gio 23+1 -> 24               KILLED  sys_6
+dow lech 1                   KILLED  sys_6
+khong lay lap khoi FIFO      KILLED  sys_3
+roi SW giu SRC=1             KILLED  sys_4
+timer khong BEEP_EN          KILLED  sys_4
+chuong gio ca khi vua nap    KILLED  sys_6
+khong tu tat 60 s            KILLED  sys_5
+so am: lay abs truoc         KILLED  sys_4
+nut khi chuong khong bi nuot KILLED  sys_4,sys_5
+thang khong kep ngay         KILLED  sys_6
+killed 15/15
+restored_ok
+(lần đầu 12/15: sống 'chuong gio ca khi vua nap', 'so am: lay abs truoc', 'thang khong kep ngay' → thêm 3 ca kiểm; ca đầu lộ lỗi firmware thật: LASTH = −1 đặt trước khi ARM nạp xong → chuông giờ kêu khi lưu SET 23 h → 0 h. Sửa: chờ ARM = 0 rồi mới đặt LASTH)
+## đột biến RTL (stopwatch va chạm + beeper) — work/mut_d3_20261003.log
+m0  stopwatch wire hw_lap    = src && press_b && run && !w_reset | CAUGHT FAIL stopwatch_tb 1 loi / 34 kiem tra
+m1  stopwatch wire hw_lap    = src && press_b && run && !w_cpu;  | CAUGHT FAIL stopwatch_tb 1 loi / 34 kiem tra
+m2  stopwatch wire hw_toggle = src && press_a;                   | CAUGHT FAIL stopwatch_tb 1 loi / 34 kiem tra
+m3  beeper    pat  <= w_pat ? bus_wdata[16:0] : P_ALARM;         | CAUGHT FAIL beeper_tb 1 loi / 14 kiem tra
+m4  beeper    if (slot == 4'd15) pat <= 17'd0;                   | CAUGHT (treo > 120 s, tb khong PASS)
+m5  beeper    if (tc == 6'd62) begin                             | CAUGHT FAIL beeper_tb 2 loi / 14 kiem tra
+m6  beeper    assign sounding = pat[{1'b0, slot}];               | CAUGHT FAIL beeper_tb 1 loi / 14 kiem tra
+m7  beeper    end else if (wc == freq) begin                     | CAUGHT FAIL beeper_tb 2 loi / 14 kiem tra
+m8  beeper    slot <= slot;                                      | CAUGHT FAIL beeper_tb 2 loi / 14 kiem tra
+m9  beeper    freq <= 16'd12499;                                 | CAUGHT FAIL beeper_tb 1 loi / 14 kiem tra
+m10 beeper    if (load) begin                                    | SURVIVED PASS beeper_tb 14
+m10 chay lai sau khi them kiem tra pha song vao beeper_tb: CAUGHT FAIL beeper_tb 1 loi / 15 kiem tra -> 11/11
+## lint: verilator_bin --lint-only -Wall (soc_top toàn bộ src; beeper riêng) -> sạch (work/lint_20261003b.log)
+(log lint 615 byte = 2 dòng "Verilation Report", không có %Warning/%Error)
+## Yosys: synth_xilinx -top soc_top -flatten -run :map_ffs (+ beeper, IMEM = work/main.hex) — work/yosys_soc_top_xilinx_20261003b.log
+    14958 cells
+        4   DSP48E1
+        1   RAMB36E1
+latch trong stat: 0 (LDCE/LDPE chỉ xuất hiện ở dòng nạp thư viện cell)

@@ -1,0 +1,98 @@
+# 2026-10-02 tối — C4 soc_regs/bus, C5 irq_ctrl + nhận ngắt G1, C6 soc_top bản đầu, firmware đồng hồ thật trên CPU
+# Lệnh: bash tools/run_unit.sh (mọi tb + cosim mặc định) ; COSIM_CEDIV=3 python tools/cosim_mars.py irq cp0 mmio all27 bcd fact10
+# Máy Long, Icarus 14.0 / Verilator 5.053 / Yosys 0.69 / MARS 4.5. Trạng thái: verified (chạy thật, log dưới).
+## sha1
+7a68dcd0a29839b8654b645d4a028ef77d43e3d8 *src/soc_regs.v
+3de14d5218ecb834b7748b10d4e8923f38d7a8d7 *src/irq_ctrl.v
+135c4b99ccefb6021810c9344887c69e0311c804 *src/soc_top.v
+025d4ce2e6ba5f40e5b5c92f0f2cbd01d532f629 *src/cpu_g1.v
+0ad5ae2ef5c9ff61f4efaa12c62be7c24c44c20b *tb/irq_tb.v
+8ef4851c839f341b9c4f4fc88e7453479c7160c9 *tb/soc_bus_tb.v
+7e53bcdde316dc8c0c6ba2d971423cc235c8f32d *tb/soc_clock_tb.v
+699c7def74a8e71eb46349a984a48c9194ea8d0f *tb/cpu_g1_tb.v
+5d7d1d462f51c570340cc77fc23b45195395d51b *fw/tests/cpu/irq.s
+509be24aa6309c8c9b2486aaf0f9abe959d0bde6 *fw/tests/soc/bus.s
+1a56a83db78247c856a6960426c37ab52214588f *fw/demo/clock.s
+0f93662611aea71d0e21149783f3452dd33e89e5 *tools/cosim_mars.py
+2873e0141c1bc9a2a3004daafc256fa8f17c29b4 *tools/fw_build.py
+b9c2c2fa5d6699caa8bb59a84930810153220baa *tools/run_unit.sh
+## regression
+PASS alu_tb 4200
+PASS bcd_tb 112537
+man ao: 17 anh, ket thuc o ms_of_day = 5019
+PASS clock_demo_tb 75
+PASS control_tb 82646
+PASS display_ctrl_tb 54
+PASS irq_tb 12
+PASS muldiv_tb 5806
+PASS regfile_tb 2040
+PASS rtc_tb 22
+PASS seg7_tb 25362
+v0 = 000003ff, 44 lenh MMIO, 7966 chu ky he thong
+PASS soc_bus_tb 13
+ngat: 10 lan, do tre (CYCLE_COUNT dau handler - IRQ_STAMP) min 3 max 3 chu ky he thong (D = 2)
+man ao: 13 anh -> work/screen_soc_clock.log
+PASS soc_clock_tb 24
+PASS timebase_tb 693
+OK   all27        vs MARS         lenh=87     chu_ky_CPU=151    CPI=1.74
+OK   bcd          rieng (expect)  lenh=320    chu_ky_CPU=455    CPI=1.42
+OK   cp0          rieng (expect)  lenh=16     chu_ky_CPU=16     CPI=1.00
+OK   fact10       vs MARS         lenh=122    chu_ky_CPU=122    CPI=1.00
+OK   hazard       vs MARS         lenh=16     chu_ky_CPU=16     CPI=1.00
+OK   irq          rieng (expect)  lenh=155    chu_ky_CPU=187    CPI=1.21
+OK   mmio         rieng (expect)  lenh=15     chu_ky_CPU=15     CPI=1.00
+OK   sum100       vs MARS         lenh=304    chu_ky_CPU=304    CPI=1.00
+OK   unaligned    rieng (expect)  lenh=6      chu_ky_CPU=6      CPI=1.00
+OK   rand01       vs MARS         lenh=321    chu_ky_CPU=705    CPI=2.20
+OK   rand02       vs MARS         lenh=300    chu_ky_CPU=556    CPI=1.85
+OK   rand03       vs MARS         lenh=315    chu_ky_CPU=539    CPI=1.71
+OK   rand04       vs MARS         lenh=318    chu_ky_CPU=542    CPI=1.70
+OK   rand05       vs MARS         lenh=299    chu_ky_CPU=651    CPI=2.18
+OK   rand06       vs MARS         lenh=309    chu_ky_CPU=757    CPI=2.45
+OK   rand07       vs MARS         lenh=317    chu_ky_CPU=605    CPI=1.91
+OK   rand08       vs MARS         lenh=311    chu_ky_CPU=759    CPI=2.44
+PASS cosim_mars 17
+=== cediv 3
+OK   irq          rieng (expect)  lenh=155    chu_ky_CPU=187    CPI=1.21
+OK   cp0          rieng (expect)  lenh=16     chu_ky_CPU=16     CPI=1.00
+OK   mmio         rieng (expect)  lenh=15     chu_ky_CPU=15     CPI=1.00
+OK   all27        vs MARS         lenh=87     chu_ky_CPU=151    CPI=1.74
+OK   bcd          rieng (expect)  lenh=320    chu_ky_CPU=455    CPI=1.42
+OK   fact10       vs MARS         lenh=122    chu_ky_CPU=122    CPI=1.00
+PASS cosim_mars 6
+## chạy lại soc_bus, soc_clock, irq sau khi dời $readmemh sang t = 1 ns (tb sửa 16:10, 2 tb này dựng 16:09)
+PASS soc_bus_tb 13 · PASS soc_clock_tb 24 · PASS irq_tb 12
+## cpu_ce khác 1 cho irq.s
+COSIM_CEDIV=2,3,7 python tools/cosim_mars.py irq -> PASS cosim_mars 1 (mỗi lần)
+## đột biến (bản sao src ở $CLAUDE_JOB_DIR/tmp/mut3, mut4) — BAT = có test FAIL
+i1 take_irq bỏ !stall                    -> cosim irq FAIL   BAT
+i2 take_irq chỉ chặn eret (bỏ chặn mtc0)  -> lần đầu PASS (LỌT) -> thêm ca mtc0 bật/tắt IE liền nhau (bit 6) -> FAIL  BAT
+i3 EPC <- pc+4 thay next_pc               -> FAIL   BAT
+i4 bỏ điều kiện !EXL                      -> FAIL   BAT
+i5 không đặt EXL khi vào                  -> FAIL   BAT
+q1 lệnh xóa thắng sự kiện (IRQ-3)         -> irq_tb FAIL  BAT
+q2 IRQ_STAMP chốt mọi chu kỳ irq=1        -> irq_tb FAIL  BAT
+s1 nạp p ở mọi cpu_ce (bỏ ph)             -> PASS: TƯƠNG ĐƯƠNG (G1 ghi D ở pha B, cùng cạnh p nạp D cũ) -> code rút gọn thành bản này
+s2 không ép D lẻ                          -> soc_bus FAIL  BAT
+s3 CYCLE_COUNT đọc +1                     -> lần đầu PASS (LỌT: chỉ so hiệu) -> thêm 'CC = 0 ở lệnh đầu' (bit 9) -> FAIL  BAT
+s4 khối soc không nạp 0 khi địa chỉ lạ     -> soc_bus FAIL  BAT
+s5 cpu_ce so thẳng period (D mới ngay giữa lệnh ghi) -> soc_bus FAIL bit 4  BAT
+s6 DIV_FLAGS luôn 0                       -> FAIL  BAT
+s7 CAL chỉ giữ 16 bit thấp                -> FAIL  BAT
+d1 bộ giải mã quên OR irq_ctrl            -> FAIL  BAT
+## lint: verilator_bin --lint-only -Wall --top-module soc_top src/*.v -> sạch (sau khi bỏ khởi tạo rst_sync)
+## Yosys: synth_xilinx -top soc_top -flatten -run :map_ffs (IMEM = fw/demo/clock.s) -> 1 RAMB36E1, 4 DSP48E1, 9729 cell trước map LUT; log work/yosys_soc_top_xilinx.log
+## màn ảo soc_clock (python tools/screen.py work/screen_soc_clock.log)
+t=      6 ms |               <- xe hinh (ghi do, 1 vong quet)
+t=     12 ms |   23.59.55  
+t=   1017 ms |   23.59.56  
+t=   2016 ms |   23.59.57  
+t=   3014 ms |   23.59.58  
+t=   4019 ms |   23.59.59  
+t=   5011 ms |   00.09.59    <- xe hinh (ghi do, 1 vong quet)
+t=   5017 ms |   00.00.00  
+t=   6016 ms |   00.00.01  
+t=   7014 ms |   00.00.02  
+t=   8019 ms |   00.00.03  
+t=   9017 ms |   00.00.04  
+t=  10016 ms |   00.00.05  

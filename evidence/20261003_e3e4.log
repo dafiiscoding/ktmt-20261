@@ -1,0 +1,72 @@
+# E3 stopwatch + cdtimer, E4 alarm + buttons, ghép soc_top — 03/10/2026 (Claude, theo Long chọn A)
+## sha1
+7fd4e8f1798173962f89536104621adf5a1bda50 *src/timers.v
+bd2533859af150d7142b51aa87cb25c383c8d1ea *src/buttons.v
+412d2d6396a63ecbeb65110a7f1f4fbc14177f97 *src/soc_top.v
+2a06e65db469f3e11f33b1db4d29ebde7519525c *tb/stopwatch_tb.v
+a0e6e4444a7e3bef56e7d864d09d21adac521c38 *tb/cdtimer_tb.v
+dd4d65f53488ebf9589f516fd18600bc80df9acb *tb/alarm_tb.v
+988303d519021f7c41173278e9574dfe226d1234 *tb/buttons_tb.v
+634df4801f6d4554d6945d815a9d08f20261e772 *tb/soc_bus_tb.v
+524b7a5ee1744679f25164b6f3281449648b09f0 *tb/soc_clock_tb.v
+0570e14f74445a39f484ff9d7619089d403ff59b *fw/tests/soc/bus.s
+## regression (chạy lại trên code cuối, sau đổi dịch-cộng): bash tools/run_unit.sh (exit 0) — work/regress_20261003.log
+PASS alarm_tb 15
+PASS alu_tb 4200
+PASS bcd_tb 112537
+PASS buttons_tb 20
+PASS cdtimer_tb 20
+PASS clock_demo_tb 75
+PASS control_tb 82646
+PASS display_ctrl_tb 54
+PASS irq_tb 12
+PASS muldiv_tb 5806
+PASS regfile_tb 2040
+PASS rtc_tb 22
+PASS seg7_tb 25362
+PASS soc_bus_tb 17
+PASS soc_clock_tb 24
+PASS stopwatch_tb 32
+PASS timebase_tb 693
+PASS cosim_mars 17
+## mutation khối (25 đột biến; lần 1: 6 lọt -> thêm test, 1 là bug thiết kế thật m4/m24) — work/mut_e34_20261003.log
+(chạy trên timers.v trước khi đổi target sang dịch-cộng; các dòng bị đột biến không đổi)
+m0  stopwatch wire hw_lap    = src && press_b;                   | CAUGHT FAIL stopwatch_tb 1 loi / 32 kiem tra
+m1  stopwatch wire accept    = push && (cnt != 4'd8);            | CAUGHT FAIL stopwatch_tb 2 loi / 32 kiem tra
+m2  stopwatch .clr(1'b0), .en(run)                               | CAUGHT FAIL stopwatch_tb 2 loi / 32 kiem tra
+m3  stopwatch if (val > G_SW_MAX) ovf                            | CAUGHT FAIL stopwatch_tb 1 loi / 32 kiem tra
+m4  stopwatch if (hw_toggle) run <= !run;                        | CAUGHT FAIL stopwatch_tb 1 loi / 32 kiem tra
+m5  stopwatch wire w_cpu   = wr_ctrl;                            | CAUGHT FAIL stopwatch_tb 2 loi / 32 kiem tra
+m6  cdtimer   assign zero_ev = tick && (val == 32'd1);           | CAUGHT FAIL cdtimer_tb 1 loi / 20 kiem tra
+m7  cdtimer   if (val == MIN) sat <= 1'b1;                 val < | CAUGHT FAIL cdtimer_tb 1 loi / 20 kiem tra
+m8  cdtimer   .clr(1'b0), .en(run)                               | CAUGHT FAIL cdtimer_tb 3 loi / 20 kiem tra
+m9  cdtimer   else if (w_ctl) zero <= 1'b0;                      | CAUGHT FAIL cdtimer_tb 1 loi / 20 kiem tra
+m10 cdtimer   assign beep    = zero_ev;                          | CAUGHT FAIL cdtimer_tb 2 loi / 20 kiem tra
+m11 alarm     new_hit[g] = inc && en[g]                          | CAUGHT FAIL alarm_tb 3 loi / 15 kiem tra
+m12 alarm     (ms == target[g]);                                 | CAUGHT FAIL alarm_tb 2 loi / 15 kiem tra
+m13 alarm     )  hit[i] <= 1'b0;                                 | CAUGHT FAIL alarm_tb 1 loi / 15 kiem tra
+m14 alarm     new_hit[g] = chk                                   | CAUGHT FAIL alarm_tb 1 loi / 15 kiem tra
+m15 alarm     ev  <= new_hit[0];                                 | CAUGHT FAIL alarm_tb 1 loi / 15 kiem tra
+m16 buttons   if (cnt[i] == 4'd0) st[i] <= lvl[i] ? S_HELD : S_I | CAUGHT FAIL buttons_tb 5 loi / 20 kiem tra
+m17 buttons   st[i] <= S_IDLE;                                   | CAUGHT FAIL buttons_tb 5 loi / 20 kiem tra
+m18 buttons                                                      | CAUGHT FAIL buttons_tb 5 loi / 20 kiem tra
+m19 buttons   code = pend[3] ? 2'd3 : pend[2] ? 2'd2 : pend[1] ? | CAUGHT FAIL buttons_tb 2 loi / 20 kiem tra
+m20 buttons   fifo[wp] <= {code, ms};                            | CAUGHT FAIL buttons_tb 1 loi / 20 kiem tra
+m21 buttons   wire accept = has;                                 | CAUGHT FAIL buttons_tb 3 loi / 20 kiem tra
+m22 buttons   s1 <= 4'd0;  s2 <= 4'd0;                           | CAUGHT FAIL buttons_tb 1 loi / 20 kiem tra
+m23 buttons   S_HELD:   if (1'b0)                                | CAUGHT FAIL buttons_tb 12 loi / 20 kiem tra
+m24 stopwatch else if (hw_toggle && !wr_ctrl) run <= !run;       | CAUGHT FAIL stopwatch_tb 1 loi / 32 kiem tra
+## mutation dây soc_top qua soc_bus_tb (6; lần 1: s1, s3 lọt -> thêm ca nút C, nạp RTC đúng target) — work/mut_soc_e34_20261003.log
+s0 .ev({2'd0, btn_ev, sw_capture, tmr_zero, alarm_ev, tick_1s,  | v0 = 000027ff, 891 lenh MMIO, 23910 chu ky he thong / FAIL soc_bus_tb 2 loi / 17 kiem tra
+s1 .ev({2'd0, sw_capture, btn_ev, alarm_ev, tmr_zero, tick_1s,  | v0 = 00001fff, 524 lenh MMIO, 20236 chu ky he thong / FAIL soc_bus_tb 1 loi / 17 kiem tra
+s2 .press_a(press[2]), .press_b(press[1])                       | v0 = 00001fff, 524 lenh MMIO, 20232 chu ky he thong / FAIL soc_bus_tb 1 loi / 17 kiem tra
+s3 .inc(tick_ms)                                                | v0 = 00002fff, 398 lenh MMIO, 18982 chu ky he thong / FAIL soc_bus_tb 1 loi / 17 kiem tra
+s4 rd_al                                                        | v0 = 00001fff, 217 lenh MMIO, 17164 chu ky he thong / FAIL soc_bus_tb 1 loi / 17 kiem tra
+s5 rd_tmr                                                       | v0 = 00001bff, 525 lenh MMIO, 20230 chu ky he thong / FAIL soc_bus_tb 2 loi / 17 kiem tra
+## lint: verilator_bin --lint-only -Wall (soc_top toàn bộ src; stopwatch/cdtimer/alarm/buttons riêng; buttons -GG_ACTIVE_LOW=1) -> sạch
+## Yosys: synth_xilinx -top soc_top -flatten -run :map_ffs (IMEM = work/yosys_clock.hex) — work/yosys_soc_top_xilinx_20261003.log
+    12478 cells
+        4   DSP48E1
+        1   RAMB36E1
+latch: 0
+(02/10: 4 DSP; bản đầu E4 dùng * 60000 -> 5 DSP, lệch spec §6 'vài bộ cộng' -> viết dịch-cộng -> 4 DSP)

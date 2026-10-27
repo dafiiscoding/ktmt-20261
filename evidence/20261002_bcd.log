@@ -1,0 +1,6 @@
+# 2026-10-02 11:33 · Icarus Verilog version 14.0 (devel) (s20260301-500-g2e81fcccb-dirty)
+# lenh: bash tools/run_unit.sh bcd
+# sha1 0a10256f89a4c49f0a68ed695f787b4ec88c1ee5 *src/bcd_unit.v
+# sha1 dbc684bfd24537c8306e090c643483b787eac986 *tb/bcd_tb.v
+# sha1 b6f163421e9d3efe4aa5d1c228686fa331a0c2c2 *tb/vectors/bcd.txt
+PASS bcd_tb 112537

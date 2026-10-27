@@ -1,0 +1,9 @@
+# 2026-10-02 10:46 · Icarus Verilog version 14.0 (devel) (s20260301-500-g2e81fcccb-dirty)
+# lenh: bash tools/run_unit.sh display_ctrl
+# sha1 b88a6337870c8bade2fa5e0b1f311c2d64ff3664 *src/display_ctrl.v
+# sha1 7484d57c2bb7857ade0c926d3a88f7299bd6f7dd *src/seg7_scan.v
+# sha1 a326e2c2ef6b2b51caf37ece14d991d638af9b2e *src/char_rom.v
+# sha1 d3858d90b74407681f78034576535a1ad4f8e935 *tb/display_ctrl_tb.v
+PASS display_ctrl_tb 54
+tb/display_ctrl_tb.v:137: $finish called at 134440000 (1ps)
+# exit=0

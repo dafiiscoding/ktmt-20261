@@ -1,0 +1,20 @@
+E4 G_SLOT=50000 G_BLANK=0 T_OFF=50 gap=5 on=800675 ghost=630 ti_le=0.079%
+E4 G_SLOT=50000 G_BLANK=100 T_OFF=50 gap=10 on=799000 ghost=0 ti_le=0.000%
+E4 G_SLOT=12500 G_BLANK=0 T_OFF=50 gap=5 on=802835 ghost=2520 ti_le=0.314%
+E4 G_SLOT=12500 G_BLANK=100 T_OFF=50 gap=10 on=796120 ghost=0 ti_le=0.000%
+E4 G_SLOT=3125 G_BLANK=0 T_OFF=50 gap=5 on=811475 ghost=10080 ti_le=1.242%
+E4 G_SLOT=3125 G_BLANK=100 T_OFF=50 gap=10 on=784600 ghost=0 ti_le=0.000%
+E4 G_SLOT=3125 G_BLANK=0 T_OFF=150 gap=5 on=836975 ghost=32480 ti_le=3.881%
+E4 G_SLOT=3125 G_BLANK=100 T_OFF=150 gap=10 on=810100 ghost=8960 ti_le=1.106%
+PASS exp_e4_tb 9
+tb/exp_e4_tb.v:109: $finish called at 16000040000 (1ps)
+E4 G_SLOT=50000 G_BLANK=0 T_OFF=50 gap=5 on=200135 ghost=135 ti_le=0.067%
+E4 G_SLOT=50000 G_BLANK=100 T_OFF=50 gap=10 on=199720 ghost=0 ti_le=0.000%
+E4 G_SLOT=12500 G_BLANK=0 T_OFF=50 gap=5 on=200675 ghost=630 ti_le=0.314%
+E4 G_SLOT=12500 G_BLANK=100 T_OFF=50 gap=10 on=199000 ghost=0 ti_le=0.000%
+E4 G_SLOT=3125 G_BLANK=0 T_OFF=50 gap=5 on=202835 ghost=2520 ti_le=1.242%
+E4 G_SLOT=3125 G_BLANK=100 T_OFF=50 gap=10 on=196120 ghost=0 ti_le=0.000%
+E4 G_SLOT=3125 G_BLANK=0 T_OFF=150 gap=5 on=209135 ghost=8120 ti_le=3.883%
+E4 G_SLOT=3125 G_BLANK=100 T_OFF=150 gap=10 on=202420 ghost=2240 ti_le=1.107%
+PASS exp_e4_tb 9
+tb/exp_e4_tb.v:109: $finish called at 4000040000 (1ps)

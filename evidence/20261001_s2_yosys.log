@@ -1,0 +1,7 @@
+# 2026-10-01 22:58 - Yosys 0.69+173 (git sha1 53f1cdd34-dirty, Release, GNU /usr/bin/x86_64-w64-mingw32-g++ 15.2.1)
+# lenh moi module: yosys -p "read_verilog <src>; synth -top <m> -flatten; stat"  (tong hop chung, khong map FPGA)
+alu: cells=1147 ff=0 errors=0
+muldiv: cells=3936 ff=169 errors=0
+regfile: cells=4291 ff=1024 errors=0
+timebase: cells=430 ff=82 errors=0
+seg7_scan: cells=454 ff=28 errors=0

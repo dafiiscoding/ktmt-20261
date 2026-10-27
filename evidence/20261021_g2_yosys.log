@@ -1,0 +1,29 @@
+# 2026-10-21 Yosys G1 vs G2 (sau ngắt G2) — synth_xilinx -top soc_top -flatten -run :map_ffs, IMEM = work/main.hex (chparam)
+== soc_top G1 (log work/yosys_soc_top_G1_20261021.log)
+    14958 cells
+        4   DSP48E1
+        1   RAMB36E1
+       10   RAM32M
+    14958 cells
+        4   DSP48E1
+        1   RAMB36E1
+       10   RAM32M
+mapping memory:
+mapping memory soc_top.u_cpu.dmem via $__XILINX_BLOCKRAM_TDP_
+== soc_top G2 (log work/yosys_soc_top_G2_20261021.log)
+    13471 cells
+        4   DSP48E1
+        2   RAMB36E1
+       10   RAM32M
+    13471 cells
+        4   DSP48E1
+        2   RAMB36E1
+       10   RAM32M
+mapping memory:
+mapping memory soc_top.u_cpu.dmem via $__XILINX_BLOCKRAM_TDP_
+mapping memory soc_top.u_cpu.imem via $__XILINX_BLOCKRAM_TDP_
+# Ghi chu: G2 imem map BRAM (dong 'mapping memory ... u_cpu.imem'), G1 khong.
+# Nguyen nhan (verified tu log): G1 doc imem o dia chi tu logic to hop pc_new (src/cpu_g1.v:190) → Yosys bao
+#   'no address FF found' / 'no output FF found' va chuyen sang 'using FF mapping for memory u_cpu.imem' (log dong 3386, 4112-4116, 4174).
+#   G2 doc imem o dia chi tu thanh ghi pc (src/cpu_pipe.v:270) → 'merging output FF to cell' (dong 4211) → BRAM (dong 5022).
+# So RAMB36 thu 2 o G2 la imem; G1 khong co RAMB cho imem. Ap dung cho DSE: so o G1 bao gom imem duoi dang FF/LUT (chua tach so).

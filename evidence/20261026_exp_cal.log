@@ -1,0 +1,27 @@
+# 2026-10-26 — E1′/E2′ thí nghiệm CAL
+# E2′: vvp work/exp_cal_tb.vvp +slow (build: bash tools/run_unit.sh exp_cal)
+E2 G_N=50 cal=0 chu_ky=100000 ky_vong=100000 OK
+E2 G_N=50 cal=65500 chu_ky=101998 ky_vong=101998 OK
+E2 G_N=50 cal=-65500 chu_ky=98001 ky_vong=98001 OK
+E2 G_N=50 cal=163840 chu_ky=105000 ky_vong=105000 OK
+E2 G_N=50 cal=-163840 chu_ky=95000 ky_vong=95000 OK
+E2 G_N=50 cal=655360 chu_ky=120000 ky_vong=120000 OK
+E2 G_N=50 cal=-655360 chu_ky=80000 ky_vong=80000 OK
+E2 G_N=50 cal=12345 chu_ky=100376 ky_vong=100376 OK
+E2 G_N=50 cal=-1 chu_ky=99999 ky_vong=99999 OK
+E2 G_N=50000 cal=65500 chu_ky=100001998 ky_vong=100001998 OK
+PASS exp_cal_tb 10
+
+# E1′: python tools/exp_cal.py (firmware fw/main.s trên ISS → CAL; RTL timebase G_N=50000, 1000 ms; assert C = K·G_N + floor(K·CAL/65536))
+| Lệch thạch anh (ppm) | I (phút) | D (ms) | CAL firmware | C sau 1000 ms (RTL) | Lệch sau CAL (ppm) |
+|---|---|---|---|---|---|
+| -199 | 60 | -716 | -651700 | 49990055 | -0.100 |
+| -80 | 60 | -288 | -262100 | 49996000 | +0.000 |
+| -20 | 60 | -72 | -65500 | 49999000 | +0.000 |
+| +20 | 60 | +72 | 65500 | 50000999 | +0.020 |
+| +80 | 60 | +288 | 262100 | 50003999 | +0.020 |
+| +150 | 60 | +540 | 491500 | 50007499 | +0.020 |
+| +250 | 60 | +900 | 0 | 50000000 | +250.000 |
+| +20 | 10 | +12 | 65500 | 50000999 | +0.020 |
+| +20 | 1440 | +1728 | 65500 | 50000999 | +0.020 |
+| +3 | 10 | +2 | 10900 | 50000166 | -0.320 |

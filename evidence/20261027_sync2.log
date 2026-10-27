@@ -1,0 +1,7 @@
+# 27/10 bo dem doi sy_rx: do tre chup gio (lenh) 3 cau $Q lien nhau, MS_OF_DAY = so lenh
+== sau sua
+byte moi 37 lenh: tre (lenh) = [16, 16, 419] so cau tra loi 3
+byte moi 5 lenh: tre (lenh) = [61, 161, 716] so cau tra loi 3
+== truoc sua
+byte moi 37 lenh: tre (lenh) = [16, 465, 653] so cau tra loi 3
+byte moi 5 lenh: tre (lenh) = [61, 562, 941] so cau tra loi 3

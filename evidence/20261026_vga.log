@@ -1,0 +1,22 @@
+# 2026-10-26 — Gói D5 VGA đuổi tia (src/vga_digits.v, gắn trong display_ctrl, chân mới ở soc_top)
+
+## Test
+bash tools/run_unit.sh vga_digits → PASS vga_digits_tb 7
+  V-2: 595/595 điểm vga_points.txt (ô + đoạn; điểm nền trong vùng chữ số cũng kiểm ô)
+  V-1: khung 800 × 525 pixel × 2 chu kỳ · hsync thấp 96 pixel · dòng 800 pixel · vsync cao 523 dòng (thấp 2)
+  V-3: khung disp = {1A,1A,01,82,03,84,05,06}, dim = ô 2 → 640 × 480 pixel khớp mô hình tb (đoạn từ bảng §7,
+       mã → đoạn chép §3), vùng không hiện (x 640…799) đen; 9 184 pixel sáng, 14 368 vết mờ → work/vga_frame.ppm/.png
+       (đã xem bằng mắt: "1 2. 3 _ 5 6", ô 2 chỉ còn vết mờ)
+display_ctrl_tb 56 (+2: dim = 0 ở tick 249, dim = BLINK_MASK ở tick 250 → VGA cùng pha nháy LED)
+Hồi quy đầy đủ (work/regress_20261026_vga.log): 26 tb PASS, cosim_mars 19, pytest 91 passed 1 skipped, cosim_iss 25 → EXIT=0
+Lint: verilator_bin --lint-only -Wall src/*.v --top-module soc_top → sạch
+
+## Đột biến RTL (bản đúng giữ ở scratchpad, khôi phục + cmp xong)
+hsync 752→751 · vsync 490→489 · đoạn c v<145 · bỏ dim · màu mờ 111 · thứ tự ô đảo · dp lấy bit 6 · tổng ngang 798
+  → vga_digits_tb FAIL cả 8; bỏ pha nháy (dim = BLINK_MASK) → display_ctrl_tb FAIL. 9/9.
+
+## Số đo (inference: Yosys, không phải Vivado)
+vga_digits riêng: synth -flatten; abc -lut 6 → 143 $lut + 25 FF, 0 bộ nhớ (work/yosys_vga_digits_20261026.log)
+  synth_xilinx đầy đủ: ABC assertion (vecInt.h:448) như các lần trước → không có số LUT Xilinx thật.
+soc_top G1 synth_xilinx -run :map_ffs (work/yosys_soc_top_G1_20261026_vga.log): 16 303 → 16 933 ô (+630, gồm cả
+  +8 lệnh chặn CAL trong ROM IMEM), RAMB36E1 1 (không đổi), RAM32M 10, DSP48E1 4 → VGA không dùng BRAM (verified ở mức này).

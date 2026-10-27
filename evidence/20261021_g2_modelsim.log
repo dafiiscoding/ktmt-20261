@@ -1,0 +1,51 @@
+# 2026-10-21 G2 tren ModelSim 2020.1 (Starter) — tools/run_modelsim_g2.py
+# So sanh tung byte csv + dump voi Icarus chay ngay cung plusargs (cung tb cpu_pipe_tb.v)
+# Nguyen nhan 9 SAI lan dau: (1) tham chieu csv cu/stale tu lan chay --rand 0 (rand*.csv khong tao lai), (2) ten cp0 trung giua cpu/ va hazard/ ghi de file. Khong phai loi RTL: sau khi sua, 47/47 khop tung byte.
+OK  all27        csv=True dump=True tb=True
+OK  bcd          csv=True dump=True tb=True
+OK  cp0          csv=True dump=True tb=True
+OK  fact10       csv=True dump=True tb=True
+OK  hazard       csv=True dump=True tb=True
+OK  mmio         csv=True dump=True tb=True
+OK  sum100       csv=True dump=True tb=True
+OK  unaligned    csv=True dump=True tb=True
+OK  bcd_busy     csv=True dump=True tb=True
+OK  branch       csv=True dump=True tb=True
+OK  cp0          csv=True dump=True tb=True
+OK  jump         csv=True dump=True tb=True
+OK  load_use     csv=True dump=True tb=True
+OK  mmio_once    csv=True dump=True tb=True
+OK  multi        csv=True dump=True tb=True
+OK  raw_chain    csv=True dump=True tb=True
+OK  zero_reg     csv=True dump=True tb=True
+OK  rand01       csv=True dump=True tb=True
+OK  rand02       csv=True dump=True tb=True
+OK  rand03       csv=True dump=True tb=True
+OK  rand04       csv=True dump=True tb=True
+OK  rand05       csv=True dump=True tb=True
+OK  rand06       csv=True dump=True tb=True
+OK  rand07       csv=True dump=True tb=True
+OK  rand08       csv=True dump=True tb=True
+OK  rand09       csv=True dump=True tb=True
+OK  rand10       csv=True dump=True tb=True
+OK  rand11       csv=True dump=True tb=True
+OK  rand12       csv=True dump=True tb=True
+OK  rand13       csv=True dump=True tb=True
+OK  rand14       csv=True dump=True tb=True
+OK  rand15       csv=True dump=True tb=True
+OK  rand16       csv=True dump=True tb=True
+OK  rand17       csv=True dump=True tb=True
+OK  rand18       csv=True dump=True tb=True
+OK  rand19       csv=True dump=True tb=True
+OK  rand20       csv=True dump=True tb=True
+OK  rand21       csv=True dump=True tb=True
+OK  rand22       csv=True dump=True tb=True
+OK  rand23       csv=True dump=True tb=True
+OK  rand24       csv=True dump=True tb=True
+OK  rand25       csv=True dump=True tb=True
+OK  rand26       csv=True dump=True tb=True
+OK  rand27       csv=True dump=True tb=True
+OK  rand28       csv=True dump=True tb=True
+OK  rand29       csv=True dump=True tb=True
+OK  rand30       csv=True dump=True tb=True
+PASS modelsim_g2 47 dung / 47

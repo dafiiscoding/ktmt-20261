@@ -1,0 +1,54 @@
+\chapter{PHƯƠNG PHÁP LUẬN VÀ THIẾT KẾ}
+
+\section{Công cụ và cấu trúc mã nguồn}
+\TODO{TV2. Verilog; iverilog + ModelSim (mô phỏng), Yosys (tổng hợp); Python (\texttt{asm.py}, \texttt{iss.py}, \texttt{cmp\_trace.py}); cây thư mục (\texttt{KE-HOACH} §6); testbench. Ghi rõ: không có Vivado/Quartus nên không có Fmax.}
+
+\section{Tổng thể SoC}
+\hinhtrong{Sơ đồ tổng thể SoC WatchChip (H1)}{TV3}{khối trên hình = module trong \texttt{soc\_top.v}}
+\TODO{TV3. Thông số (IMEM/DMEM, xung nhịp mô phỏng), giao diện vào/ra.}
+
+\section{Bộ điều khiển hiển thị}
+\TODO{TV4. Display RAM, ROM ký tự, quét 7 đoạn (khoảng tắt \texttt{G\_BLANK}, bản sửa 27/10), VGA đuổi tia. Nháp: \texttt{report/2.3-vga.md}. Khớp \texttt{docs/display-spec.md}.}
+\hinhtrong{Bộ điều khiển hiển thị và giản đồ thời gian quét có khoảng tắt (H7)}{TV4}{khớp \texttt{display-spec.md} §4}
+
+\section{Timebase, hiệu chỉnh CAL và các bộ định thời}
+\TODO{TV5. Timebase + \texttt{CAL}, RTC, stopwatch có capture, TIMER đếm ngược, alarm, nút. Phần thí nghiệm E1$'$/E2$'$ đặt ở mục~\ref{sec:thi-nghiem}.}
+\hinhtrong{Timebase và các bộ định thời, có đường capture (H5)}{TV5}{}
+
+\section{Bus, MMIO, bộ điều khiển ngắt, UART, bộ tạo âm}
+\TODO{TV4/TV3. Nháp UART + ngắt UART\_RX: \texttt{report/2.5-uart-sync-ngat.md}. Bảng địa chỉ khớp \texttt{docs/mmio-map.md}.}
+\hinhtrong{Bản đồ địa chỉ MMIO (H6)}{TV4}{khớp \texttt{mmio-map.md}}
+
+\section{CPU G1: đơn chu kỳ}
+\subsection{Datapath}
+\hinhtrong{Datapath CPU G1 (H2)}{TV1}{mỗi tên tín hiệu có trong \texttt{cpu\_g1.v}}
+\subsection{Khối điều khiển và bảng chân lý}
+\TODO{TV3. Bảng chân lý cho \textbf{cả 28 lệnh}, khớp \texttt{docs/control-table.md}.}
+\subsection{CP0 và ngắt}
+\subsection{Vì sao chọn: G1 hai pha (BRAM sườn xuống) hay LUT-RAM}
+
+\section{CPU G2: pipeline 5 tầng}
+\hinhtrong{Datapath CPU G2 đầy đủ (H3)}{TV3}{}
+\subsection{Thanh ghi đường ống}
+\TODO{TV3. Bảng trường + độ rộng từng thanh ghi tầng, khớp \texttt{cpu\_pipe.v}.}
+
+\section{Xử lý xung đột}
+\TODO{TV2. Mỗi loại đi đủ 5 bước: định nghĩa $\rightarrow$ biểu thức điều kiện $\rightarrow$ khối phần cứng $\rightarrow$ đoạn code $\rightarrow$ \textbf{bảng diễn biến theo chu kỳ}. Bảng chu kỳ khớp \texttt{docs/pipeline-policy.md} §7.}
+\hinhtrong{Khối forwarding và hazard unit (H4)}{TV2}{}
+\subsection{RAW ở EX và ở MEM: forwarding}
+\subsection{Load-use: stall}
+\subsection{Rẽ nhánh: quyết định ở EX, flush}
+\subsection{\texttt{busy} freeze khi \texttt{div}/\texttt{bcd}}
+\subsection{\texttt{mtc0} $\rightarrow$ \texttt{mfc0}}
+\subsection{\texttt{eret} và vào/ra ngắt}
+\subsection{Vì sao chọn}
+\TODO{So sánh $\geq 2$ phương án rồi chốt: nhánh ở EX hay ID (bảng T4), bộ đếm nhị phân hay BCD, \texttt{bcd} tổ hợp hay tuần tự, polling hay ngắt, VGA đuổi tia hay framebuffer.}
+
+\section{ALU, nhân, chia và lệnh \texttt{bcd}}
+\TODO{TV1. ALU, \texttt{muldiv}, \texttt{bcd\_unit} hai bản.}
+
+\section{Firmware}
+\TODO{TV2/TV5. 5 chế độ, \texttt{fmt}, đồng bộ giờ qua UART + \texttt{CAL} (bộ đệm đôi, 27/10). Một phần đã có trong \texttt{report/2.5-uart-sync-ngat.md}.}
+
+\section{Hiện thực các module chính}
+\TODO{Mỗi chủ gói trích 1 đoạn code ngắn có chú thích, đúng file hiện tại (\texttt{\textbackslash lstinputlisting} với \texttt{firstline/lastline}).}

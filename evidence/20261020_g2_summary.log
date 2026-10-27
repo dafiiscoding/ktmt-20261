@@ -1,0 +1,33 @@
+# 2026-10-20 — G2 (cpu_pipe C7 + hazard B5 + fw/tests/hazard B6): bang chung tong hop
+# Moi dong: lenh (log o work/), ket qua. Ban dau 'verified' = dau ra thuc trong phien nay.
+
+## 1. Regression day du (mã hiện tại)
+  bash tools/run_unit.sh -> EXIT=0   log work/regress_20261020_v3.log
+  21 tb PASS (gồm hazard_tb 200007 vector), cosim_mars 17, pytest 74 pass / 1 skip (all28.s có chủ đích), cosim_iss G1 21
+
+## 2. Cosim G2 (RTL cpu_pipe ↔ ISS, từng lệnh + trạng thái cuối + bong bóng)
+  python tools/cosim_iss.py --g2 --rand 0          -> PASS 18/18   work/cosim_g2_20261020_b.log
+  python tools/cosim_iss.py --g2 --rand 30         -> PASS 48/48   work/cosim_g2_rand30_20261020.log
+  COSIM_CEDIV=1 / 3 / 7 --g2 --rand 0               -> PASS 18/18   work/cosim_g2_cediv{1,3,7}_20261020.log
+  Ghi chu: lan dau CEDIV=3/7 sai 9/18 do CHECKER dem bong bong theo chu ky he thong (loi cua checker, RTL dung).
+           Da sua: dem theo chu ky CPU (b-a)//k - 1 va kiem chia het; ban sua van bat dot bien M6 o CEDIV=3 (6/18 SAI).
+  Gioi han: G2 chi polling (irq*, soc_bus/clock/irqlat bi bo qua).
+
+## 3. Dot bien G2 (copy trong scratchpad, khong sua src goc)
+  M1 bo stall load-use             -> BAT (all27, hazard, load_use)
+  M2 bo forward EX/MEM cho rs      -> BAT (all27, bcd)
+  M3 forward ca $0 (rs)            -> BAT (zero_reg)
+  M4 bo forward MEM/WB cho rt      -> BAT (all27, bcd, hazard, load_use, raw_chain)
+  M5 load-use bo kiem rt           -> BAT (all27, load_use)
+  M6 bo cho div (mdone)            -> BAT (all27, bcd, bcd_busy, mmio_once, multi)
+  6/6 bi bat (CEDIV=1). M6 cung bi bat o CEDIV=3 sau khi sua checker.
+  Ghi chu: lan M4 dau tien gay loi bien dich RTL (thay the trung 'else') -> lam lai bang 'else if (1'b0)'. Khong tinh vao ket qua.
+
+## 4. Lint (verilator_bin --lint-only -Wall, cpu_pipe + hazard + control, regfile, alu, muldiv, bcd_unit)
+  EXIT=0 sau khi doi n_ret sang <= (truoc do: BLKSEQ cpu_pipe.v:276).  work/lint_cpu_pipe_20261020.log
+
+## 5. Yosys synth_xilinx -top soc_top -flatten -run :map_ffs, IMEM = work/main.hex (chparam)
+  G1 (mac dinh): 14958 cells, 4 DSP48E1, 1 RAMB36E1, 10 RAM32M  — trung voi evidence 03/10 (14958) → quy trinh dung
+  G2 (-DG2):     13280 cells, 4 DSP48E1, 2 RAMB36E1, 10 RAM32M  — log work/yosys_soc_top_G2_20261020.log
+  Ghi chu: G2 co 2 RAMB36E1 (G1 co 1): nguyen nhan chua xac dinh (unverified). Chay khong nap IMEM cho 154 o — khong phai so lieu, da bo.
+  Chua chay: ModelSim (unverified), Yosys cpu_pipe rieng.

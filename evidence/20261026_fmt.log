@@ -1,0 +1,33 @@
+# 2026-10-26 — B7 fmt.s (fmt_div / fmt_bcd / fmt_hw) + B2-4 (ISS) + E7 rtc_bcd + số đo plan §8.1
+
+## Hồi quy đầy đủ: bash tools/run_unit.sh (log work/regress_20261026_fmt.log)
+25 tb PASS (thêm rtc_bcd_tb 11, fmt_bench_tb 11), system_tb 565, cosim_mars 19,
+pytest_tools 85 passed 1 skipped (thêm B2-4 ×7), cosim_iss 25 (thêm fmt_bench, so trace từng lệnh RTL ↔ ISS) → EXIT=0
+Lint: verilator_bin --lint-only -Wall src/*.v --top-module soc_top -GG_BCD_RTC=1 → sạch
+
+## B2-4 (tools/test_iss.py, ISS gọi thẳng nhãn, $ra canh 0xFFC)
+fmt_time.txt (62 dòng): fmt_div = fmt_bcd = fmt_hw (RTC_BCD dựng sẵn) = cột TIME24
+main.s draw: TIME24, TIME12, giây.ms (fmt_time), fmt_sw (36), fmt_timer (42, gồm −2^31), fmt_alarm (4), date.txt trang 2 (215)
+Số lệnh/lần (ISS): fmt_div 33, fmt_bcd 40, fmt_hw 25 (không phụ thuộc giá trị)
+
+## Số đo RTL (tb/fmt_bench_tb.v; log work/fmt_bench_20261026.log + run_unit cho G1 mặc định)
+cấu hình                  nền  fmt_div  fmt_bcd  fmt_hw   (chu kỳ hệ thống, đã trừ nền; 3 giá trị ms cho cùng số)
+G1 D=2 bcd tuần tự          6      448      324      48
+G1 D=2 bcd tổ hợp           6      448      270      48
+G2 D=1 bcd tuần tự          7      224      162      25
+G2 D=1 bcd tổ hợp           7      224      135      25
+G1 D=1526 tuần tự        4578   341824   247212   36624
+G1 D=1526 tổ hợp         4578   341824   206010   36624
+G2 D=1526 tuần tự       10682   341824   247212   38150
+G2 D=1526 tổ hợp        10682   341824   206010   38150
+→ chu kỳ CPU: div 224, bcd 162 / 135, hw 24 (G2 25). Kiểm tay: 27 lệnh + 6 div × 33 = 225 − jr = 224; 39 + 3×33 + 27 (bcd) ... = 162.
+Mọi cấu hình: 7 khung đúng (00:00:00, 12:34:56, 23:59:59 cho div/bcd; hw 12:34:56) → PASS 11.
+
+## Yosys soc_top G1 (synth_xilinx -flatten -run :map_ffs, IMEM work/main.hex)
+mặc định (G_BCD_COMB 0, G_BCD_RTC 0): 15 442 ô · G_BCD_COMB 1: 16 524 (+1 082) · G_BCD_RTC 1: 15 753 (+311)
+log work/yosys_soc_top_G1_G_BCD_COMB*_G_BCD_RTC*_20261026.log. Không phải LUT (ABC9 lỗi, xem 20261026_uart.log).
+
+## Đột biến
+rtc_bcd.v 8/8 bị bắt sau khi sửa tb (lần đầu R7 "đọc địa chỉ khác ra v" LỌT vì RTC đang 00:00:00 → nạp giá trị ≠ 0 trước khi đọc)
+  R1 s10 tới 6 · R2 m10 tới 6 · R3 giờ tới 24 · R4 tick thắng ghi · R5 "= 9" thay "≥ 9" · R6 bỏ nhớ từ hàng dưới · R7 · R8 đảo trăm/chục ms
+fmt.s 6/6 bị B2-4 bắt: F1 dịch sai giờ (hw) · F2 mặt nạ chục giờ · F3 mất chấm · F4 đảo ô · F5 3601 · F6 mã trống sai

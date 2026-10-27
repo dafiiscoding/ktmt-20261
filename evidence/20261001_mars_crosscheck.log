@@ -1,0 +1,5 @@
+# 2026-10-01 22:56 - MARS 4.5 (java 17.0.16)
+# lenh: python tools/mars_crosscheck.py  (asm sinh ra: work/mars_crosscheck.asm)
+ca: alu 50, mul 50, div 50 (bo chia 0)
+PASS mars_crosscheck 150
+# exit=0
