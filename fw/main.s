@@ -464,16 +464,24 @@ st_sv:  jal   ymd2d                     # ---- C: lưu → rtcset; về TIME
         sw    $zero, -132($zero)
         jr    $s7
 
-# rtcset: $a0 = ms trong ngày, $a1 = ngày (từ 01/01/2000) → SET_MS, SET_DAY (thứ = (ngày + 6) mod 7), ARM, chờ nạp.
-# Dùng $t0, $t1. Dùng chung cho SET (st_sv) và sync.
-rtcset: sw    $a0, -244($zero)          # SET_MS
-        addiu $t0, $a1, 6               # 01/01/2000 là thứ 7
+# rtcset: $a0 = ms trong ngày, $a1 = ngày (từ 01/01/2000) → SET_DAY (thứ = (ngày + 6) mod 7), SET_MS, ARM, chờ nạp.
+# Dùng $t0, $t1. SET (st_sv) gọi rtcset; sync gọi rtcday rồi rtcms (đọc MS_OF_DAY để bù giữa hai bước).
+rtcday: addiu $t0, $a1, 6               # chỉ ghi SET_DAY rồi trả về (sync)
         addiu $t1, $zero, 7
         div   $t0, $t1
         mfhi  $t0
         sll   $t0, $t0, 16
         or    $t0, $t0, $a1
         sw    $t0, -240($zero)          # SET_DAY
+        jr    $ra
+rtcset: addiu $t0, $a1, 6               # 01/01/2000 là thứ 7
+        addiu $t1, $zero, 7
+        div   $t0, $t1
+        mfhi  $t0
+        sll   $t0, $t0, 16
+        or    $t0, $t0, $a1
+        sw    $t0, -240($zero)          # SET_DAY
+rtcms:  sw    $a0, -244($zero)          # SET_MS (ngay trước ARM)
         addiu $t0, $zero, 1
         sw    $t0, -236($zero)          # ARM: nạp ở tick ms kế
 rs_arm: lw    $t0, -236($zero)
@@ -760,9 +768,23 @@ sy_set: sw    $a2, V_T1MS($zero)        # ---- đặt giờ T2, nó thành T1 c�
         addiu $t0, $zero, 1
         sw    $t0, V_T1OK($zero)
         sw    $zero, V_DACC($zero)
-sy_rs:  addu  $a0, $a2, $zero
-        addu  $a1, $a3, $zero
-        jal   rtcset
+sy_rs:  addu  $a1, $a3, $zero           # ---- đặt giờ T có bù trễ '\n' → tick nạp (audit CAL-BIAS-01, timer-spec §9)
+        jal   rtcday                    # SET_DAY trước: div 33 chu kỳ nằm TRƯỚC lúc đọc M, để M → ARM chỉ ~13 lệnh
+        lw    $t0, -252($zero)          # M = MS_OF_DAY ngay trước ARM (nạp ở tick kế, lúc chip lẽ ra = M + 1)
+        lw    $t1, V_SQMS($zero)        # B = MS_OF_DAY lúc nhận '\n' (cùng mốc với T của PC)
+        subu  $t0, $t0, $t1
+        slt   $t1, $t0, $zero
+        beq   $t1, $zero, sr1
+        addu  $t0, $t0, $t5             # qua nửa đêm giữa B và M ($t5 = 86 400 000)
+sr1:    addiu $t0, $t0, 1               # bù: M + 1 − B
+        addu  $a0, $a2, $t0
+        slt   $t1, $a0, $t5
+        bne   $t1, $zero, sr2
+        subu  $a0, $a0, $t5             # T + bù qua nửa đêm (hiếm) → ngày + 1, ghi lại SET_DAY
+        addiu $a1, $a3, 1
+        andi  $a1, $a1, 0xffff
+        jal   rtcday
+sr2:    jal   rtcms                     # SET_MS, ARM, chờ nạp
 sy_done: sw   $zero, V_SLEN($zero)
         sw    $zero, V_SRDY($zero)
         j     sy1

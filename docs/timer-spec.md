@@ -108,7 +108,7 @@ Trạng thái: `ms` 27 bit (0 … 86 399 999), `day` 16 bit (số ngày kể t�
 - Dùng cho cách thứ 4 trong bảng §8.1 của plan (CPU khỏi chia).
 - `RTC_BCD` **độc lập** với RTC nhị phân (không nạp theo `ARM`). Firmware chỉ dùng nó để đo chi phí `fmt_hw`, không dùng hiển thị; SET/sync ghi cả hai (lệch ≤ 1 ms, chấp nhận).
 
-## 9. Đồng bộ giờ với PC (`fw/sync.s` + `tools/sync_host.py`)
+## 9. Đồng bộ giờ với PC (`fw/main.s` nhãn `sync`/`sy_rx`; phía PC: `tb/system_tb.v` — chưa có `sync_host.py`)
 - Câu lệnh ASCII, kết thúc bằng `\n`. `CS` = XOR mọi byte **giữa** `$` và `*`, in 2 chữ số hex hoa.
   | Chiều | Câu | Ý nghĩa |
   |---|---|---|
@@ -118,6 +118,8 @@ Trạng thái: `ms` 27 bit (0 … 86 399 999), `day` 16 bit (số ngày kể t�
   | chip → PC | `$Z,<ms>,<day>*CS` | TIMER vừa về 0 |
 - Câu sai checksum hoặc sai cú pháp → bỏ, không trả lời. Cũng bỏ khi `ms` ≥ 86 400 000, `day` > 65 535, hoặc checksum viết chữ thường (chỉ nhận hex hoa).
 - Chip tính `dow = (day + 6) mod 7`.
+- **Quy ước mốc:** `T` = ⌊ms⌋ của PC lúc phát xong `'\n'` (cắt, cùng quy ước với `MS_OF_DAY`); chip chụp `B` = `MS_OF_DAY` lúc nhận `'\n'`.
+- **Đặt giờ có bù trễ** (audit CAL-BIAS-01, 05/11): `ARM` nạp ở tick kế (§3), muộn hơn `'\n'` (0, 1] ms + thời gian xử lý câu. Firmware đọc `M` = `MS_OF_DAY` ngay trước `ARM` và nạp `SET_MS = T + (M + 1 − B)` (qua nửa đêm → ngày + 1). Không bù thì mỗi lần đặt giờ chip chậm trung bình ≈ 1 ms, và vì `D` chứa sai số đó nên `CAL` học lệch: đo RTL + firmware ở cấu hình board, thạch anh lệch 0 ppm → chế độ gửi dày học ra −16,7…−20 ppm, 2 câu cách 10 phút −1,7…−3,3 ppm; sau khi bù: 0 / 0 / −1,7 ppm (1 bước lượng tử 1 ms / 10 phút).
 - **Tính `CAL` sau 2 lần đặt giờ** (firmware, số nguyên, `div` cắt về 0):
   - Lần 1 đặt giờ `T1`. Lần 2 nhận `T2`: **trước khi đặt**, đọc giờ chip `B2`.
   - `I = T2 − T1` (ms, tính cả ngày), `D = B2 − T2` (ms; dương = chip **nhanh**).

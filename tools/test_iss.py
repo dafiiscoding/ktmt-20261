@@ -332,6 +332,12 @@ def nmea(body):
     return "$%s*%02X" % (body, cs)
 
 
+def after_set(ms, day):
+    """(ms, day) của chip ngay sau khi nạp câu $T với (ms, day): ARM nạp ở tick kế = 1 ms thật sau '\\n' (timer-spec §3,
+    §9), firmware bù M + 1 − B; UartPeriph không có nhịp ms nên M = B → T + 1, qua nửa đêm thì sang ngày sau."""
+    return (ms + 1, day) if ms < 86399999 else (0, (day + 1) & 0xFFFF)
+
+
 def test_e6_sy1_sentences():
     L = [ln.rstrip("\n").split("\t") for ln in open(os.path.join(VEC, "sync_sentences.txt"), encoding="utf-8")
          if ln.strip() and not ln.startswith("#")]
@@ -339,7 +345,8 @@ def test_e6_sy1_sentences():
         c, per = sync_new()
         sync_feed(c, per, sent + "\n")
         if kind == "ACCEPT":
-            assert (per.ms, per.day, per.dow) == (int(ms), int(day), (int(day) + 6) % 7), sent
+            ems, eday = after_set(int(ms), int(day))
+            assert (per.ms, per.day, per.dow) == (ems, eday, (eday + 6) % 7), sent
             assert not per.tx, sent
         elif kind == "REJECT":
             assert (per.ms, per.day, per.arm, per.set_ms) == (12345, 777, 0, 0) and not per.tx, sent
@@ -357,7 +364,7 @@ def test_e6_sy1_stream():
     assert per.tx.decode() == 2 * (nmea("R,0,65535") + "\n")
     per.tx.clear()
     sync_feed(c, per, "x" * 40 + "\n" + "x" * 31 + nmea("T,1,2") + "\n" + nmea("T,86399999,0") + "\n")
-    assert (per.ms, per.day) == (86399999, 0) and not per.tx
+    assert (per.ms, per.day) == after_set(86399999, 0) and not per.tx         # 23:59:59.999 + 1 ms → ngày 1, 0 ms
 
 
 def test_e6_sy1_bad_shapes():
@@ -373,17 +380,19 @@ def test_e6_sy1_bad_shapes():
         assert (per.ms, per.day, per.arm) == (12345, 777, 0) and not per.tx, sent
     c, per = sync_new()
     sync_feed(c, per, nmea("T,000000001,000000002") + "\n")                 # 9 chữ số vẫn nhận
-    assert (per.ms, per.day) == (1, 2)
+    assert (per.ms, per.day) == after_set(1, 2)
 
 
 def sync_cal(t1, t2, d_ms, cal0=0):
     """t1, t2 = ms tính từ ngày 0; chip ở t2 + d_ms lúc nhận câu thứ 2 → CAL mới."""
     c, per = sync_new()
     sync_feed(c, per, nmea("T,%d,%d" % (t1 % 86400000, t1 // 86400000)) + "\n")
-    per.day, per.ms = divmod(t2 + d_ms, 86400000)
+    # chip trôi tiếp TỪ GIÁ TRỊ VỪA NẠP (không ghi đè): sai số của lần đặt giờ T1 phải hiện ra trong D, nếu không bộ
+    # test không thấy được độ lệch hệ thống của thuật toán CAL (audit ORACLE-03). Tick nạp T1 = 1 ms thật sau '\n'.
+    per.day, per.ms = divmod(per.day * 86400000 + per.ms + (t2 - t1 - 1) + d_ms, 86400000)
     per.ram[0x18] = cal0 & iss.M32
     sync_feed(c, per, nmea("T,%d,%d" % (t2 % 86400000, t2 // 86400000)) + "\n")
-    assert (per.day, per.ms) == divmod(t2, 86400000)
+    assert (per.ms, per.day) == after_set(*reversed(divmod(t2, 86400000)))
     return iss.s32(per.ram[0x18])
 
 
@@ -412,13 +421,13 @@ def test_e6_sy2_cal():
         i_ms, d_ms = int(i_ms), int(d_ms)
         c, per = sync_new()
         sync_feed(c, per, nmea("T,1000,100") + "\n")
-        assert (per.ms, per.day) == (1000, 100)
+        assert (per.ms, per.day) == after_set(1000, 100)
         t2 = 100 * 86400000 + 1000 + i_ms
         per.day, per.ms = divmod(t2 + d_ms, 86400000)
         per.ram[0x18] = int(cal0) & iss.M32
         sync_feed(c, per, nmea("T,%d,%d" % (t2 % 86400000, t2 // 86400000)) + "\n")
         assert iss.s32(per.ram[0x18]) == int(cal1), (i_ms, d_ms, cal0, res)
-        assert (per.day, per.ms) == divmod(t2, 86400000)              # vẫn đặt giờ T2 dù nhận hay bỏ
+        assert (per.ms, per.day) == after_set(*reversed(divmod(t2, 86400000)))   # vẫn đặt giờ T2 dù nhận hay bỏ
     assert len(R) > 50 and any(r[3] == "REJECT" for r in R)
 
 
@@ -514,7 +523,7 @@ def sync_seq(steps):
     for t, d in steps:
         per.day, per.ms = divmod(t + d, 86400000)
         sync_feed(c, per, nmea("T,%d,%d" % (t % 86400000, t // 86400000)) + "\n")
-        assert (per.day, per.ms) == divmod(t, 86400000)               # câu nào cũng đặt giờ
+        assert (per.ms, per.day) == after_set(*reversed(divmod(t, 86400000)))    # câu nào cũng đặt giờ
     return iss.s32(per.ram[0x18])
 
 

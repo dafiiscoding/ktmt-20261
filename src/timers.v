@@ -91,12 +91,13 @@ module rtc #(
                         set_day <= bus_wdata[15:0];
                         set_dow <= (bus_wdata[18:16] == 3'd7) ? 3'd0 : bus_wdata[18:16];   // thứ 7 (mã 7) không hợp lệ → CN
                     end
-                    A_RTC_CTRL: arm <= bus_wdata[0];                // ghi 0 = hủy lệnh nạp đang chờ
                     default: ;
                 endcase
-            end else if (tick_ms && arm) begin
-                arm <= 1'b0;                                        // đã nạp xong ở tick này, tự tắt ARM
             end
+            // ARM: chỉ lệnh ghi RTC_CTRL thắng tick (ghi cùng chu kỳ: tick dùng ARM cũ). Trước đây "else" gắn với
+            // bus_we chung của MỌI khối → sw tới khối khác đúng tick nạp làm ARM không tắt, nạp 2 lần (audit RTC-ARM-02).
+            if (bus_we && bus_addr == A_RTC_CTRL) arm <= bus_wdata[0];   // ghi 0 = hủy lệnh nạp đang chờ
+            else if (tick_ms && arm)              arm <= 1'b0;           // đã nạp xong ở tick này, tự tắt ARM
 
             // ---- đọc: giá trị trước cạnh này, nên cặp (ms, shadow) luôn cùng phía của tick
             // Đọc MS_OF_DAY đồng thời CHỤP ngày/thứ vào shadow. Firmware đọc ms trước rồi đọc shadow,

@@ -26,6 +26,7 @@ module soc_top #(
     parameter G_BTN_ACTIVE_LOW = 0,
     parameter G_BIT      = 434,         // chu kỳ / bit UART (mô phỏng: 8)
     parameter G_BCD_RTC  = 0,           // 1 = có RTC_BCD (E7, DSE: đo fmt_hw); 0 = đọc 0, không tốn ô
+    parameter G_CPU_DIV_RST = 0,        // CPU_CLK_DIV sau reset; 0 = mặc định lõi (G1 2, G2 1). Nạp FPGA G1 @50 MHz: 4 (TIM-02)
     parameter TRACE_FILE = ""
 ) (
     input  wire       clk,
@@ -42,7 +43,9 @@ module soc_top #(
     output wire [11:0] vga_rgb          // R[11:8] G[7:4] B[3:0]
 );
     // ------------------------------------------------------------ reset đồng bộ (mmio-map §1)
-    reg [1:0] rst_sync;                 // chân reset giữ ≥ 4 chu kỳ (mmio-map §1) → rst lên 1 sau 2 cạnh
+    // giá trị bật nguồn 2'b11 = power-on reset ≥ 2 chu kỳ kể cả khi chân rst_in không được kích (FPGA nạp INIT
+    // của FF; thiếu nó thì p = 0 → cpu_ce 1 xung / 65 536 chu kỳ, BEEP_FREQ = 0, UART TX kẹt 0 — audit RST-03)
+    reg [1:0] rst_sync = 2'b11;         // chân reset giữ ≥ 4 chu kỳ (mmio-map §1) → rst lên 1 sau 2 cạnh
     always @(posedge clk) rst_sync <= {rst_sync[0], rst_in};
     wire rst = rst_sync[1];
 
@@ -80,7 +83,7 @@ module soc_top #(
         .div_dz(div_dz), .pc_out(pc), .retire(retire));
 
     // thanh ghi hệ thống + tạo nhịp cho CPU
-    soc_regs #(.G_CORE(G_CORE)) u_regs (
+    soc_regs #(.G_CORE(G_CORE), .G_D_RST(G_CPU_DIV_RST)) u_regs (
         .clk(clk), .rst(rst), .bus_addr(bus_addr), .bus_wdata(bus_wdata), .bus_we(bus_we), .bus_re(bus_re),
         .bus_rdata(rd_soc), .div_dz(div_dz), .cycle_count(cycle_count), .cal(cal), .cpu_ce(cpu_ce));
 

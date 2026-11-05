@@ -17,7 +17,8 @@
 //   - cpu_ce (clock enable): xung cho phép CPU bước 1 nhịp. CPU không có clock riêng, chỉ "được phép bước"
 //     mỗi D chu kỳ, như người được phép đi 1 bước mỗi khi nghe còi.
 module soc_regs #(
-    parameter G_CORE = 1                 // 1 = G1 (D ≥ 2, chẵn; reset 2), 2 = G2 (D ≥ 1; reset 1)
+    parameter G_CORE  = 1,               // 1 = G1 (D ≥ 2, chẵn; reset 2), 2 = G2 (D ≥ 1; reset 1)
+    parameter G_D_RST = 0                // D sau reset; 0 = mặc định lõi. Phải hợp lệ theo luật ép (G1: chẵn ≥ 2)
 ) (
     input  wire        clk,
     input  wire        rst,
@@ -40,6 +41,10 @@ module soc_regs #(
     reg  [15:0] c;                       // đếm chu kỳ tới xung cpu_ce kế
     reg  [15:0] p;                       // số chu kỳ hệ thống giữa 2 xung cpu_ce, đang dùng
     wire [15:0] period = (G_CORE == 1) ? {1'b0, d[15:1]} : d;    // G1: D/2 (D chẵn)
+    // TIM-02: ở D = 2, nửa pha A → B của G1 chỉ có 20 ns (nextpnr ECP5: IMEM → ALU → giải mã MMIO 38,8 ns cấp 6, 29,7 ns cấp 8);
+    // nạp FPGA dùng G_D_RST = 4 (mỗi nửa 40 ns) + khai báo đa chu kỳ. Mô phỏng giữ mặc định → test không đổi.
+    localparam [15:0] D_RST = (G_D_RST != 0) ? G_D_RST : ((G_CORE == 1) ? 2 : 1);
+    localparam [15:0] P_RST = (G_CORE == 1) ? D_RST / 16'd2 : D_RST;
 
     // luật ép (mmio-map §1): G1 nhỏ hơn 2 → 2, lẻ → bỏ bit 0; G2 0 → 1
     // (G1 cần D chẵn vì mỗi chu kỳ CPU dùng đúng 2 xung cpu_ce)
@@ -56,9 +61,9 @@ module soc_regs #(
         if (rst) begin
             cycle_count <= 32'd0;
             cal <= 32'sd0;
-            d   <= (G_CORE == 1) ? 16'd2 : 16'd1;
+            d   <= D_RST;                        // mặc định G1 2, G2 1
             c   <= 16'd0;
-            p   <= 16'd1;                        // G1 D = 2 → 1; G2 D = 1 → 1
+            p   <= P_RST;                        // G1 D = 2 → 1; G2 D = 1 → 1
             bus_rdata <= 32'd0;
         end else begin
             cycle_count <= cycle_count + 32'd1;

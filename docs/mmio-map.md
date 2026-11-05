@@ -8,10 +8,12 @@
   - Mọi khối chậm hơn (CPU khi hạ xung, VGA 25 MHz, UART, quét LED) dùng **clock enable**, không tạo clock mới.
   - Hệ quả: không có clock domain crossing ở đâu cả, trừ chân vào (nút, UART RX) đi qua 2 flip-flop đồng bộ.
 - `rst` đồng bộ, mức cao, giữ ≥ 4 chu kỳ. Chân reset → đồng bộ 2 FF → `rst`.
+  - **Power-on reset** (audit RST-03, 05/11): 2 FF đồng bộ có giá trị bật nguồn `2'b11` → `rst` = 1 ít nhất 2 chu kỳ sau khi nạp FPGA dù chân reset không được kích. Thiếu nó: `CPU_CLK_DIV` = 0 → `cpu_ce` 1 xung / 65 536 chu kỳ, `BEEP_FREQ` = 0, UART TX kẹt 0 (đo bằng Verilator `--x-initial 0`).
 - **CPU clock enable** (`cpu_ce`), sinh từ `CPU_CLK_DIV` (§3, offset −116):
   - `D` = số chu kỳ hệ thống cho **một chu kỳ CPU**.
   - G1 cần `D ≥ 2` và chẵn (giá trị nhỏ hơn → 2, lẻ → bỏ bit 0). G2 cần `D ≥ 1` (0 → 1).
-  - Reset: G1 `D = 2` (CPU 25 MHz), G2 `D = 1` (CPU 50 MHz).
+  - Reset: G1 `D = 2` (CPU 25 MHz), G2 `D = 1` (CPU 50 MHz). Đổi được bằng parameter `G_CPU_DIV_RST` của `soc_top` (0 = mặc định này; mô phỏng giữ 0).
+  - **Timing đo được** (audit TIM-01/02, 05/11; Yosys `synth_ecp5` + nextpnr ECP5-25F, `inference` cho Xilinx): lõi G2 riêng 47 MHz (cấp tốc độ 6) / 64 MHz (cấp 8); SoC G2 36,5 MHz → 53,3 MHz (cấp 8) sau khi bỏ bộ chia `/5` trong `vga_digits`. G1 ở `D = 2`: đường pha A → B (IMEM → regfile → ALU → giải mã MMIO) dài 38,8 ns (cấp 6) / 29,7 ns (cấp 8) > 20 ns → **nạp FPGA dùng `G_CPU_DIV_RST = 4`** (mỗi nửa 40 ns) và khai báo đa chu kỳ cho các thanh ghi bật bằng `cpu_ce`.
   - Giả lập chip đồng hồ 32,768 kHz: `D = 1526` → 50·10⁶ / 1526 ≈ 32 765 Hz (lệch −0,008%).
 
 ### 1.1. G1 single-cycle trên BRAM đọc đồng bộ: 2 pha
@@ -24,7 +26,7 @@ Một chu kỳ CPU của G1 = 2 cạnh `cpu_ce` liên tiếp, gọi là **pha A*
 | giữa B → A | dữ liệu `lw` qua MUX về cổng ghi regfile; tính `next_pc` |
 
 - Đây chính là ý "BRAM ở sườn xuống" (chốt 24/09), nhưng làm bằng 2 cạnh lên của cùng clock 50 MHz.
-  - Mỗi nửa có trọn 20 ns, không bị ràng buộc nửa chu kỳ 10 ns như khi dùng sườn xuống thật.
+  - Mỗi nửa có trọn 1 chu kỳ hệ thống (20 ns ở `D = 2`, 40 ns ở `D = 4`), không bị ràng buộc nửa chu kỳ 10 ns như khi dùng sườn xuống thật. 20 ns **không đủ** trên ECP5 (xem §1, timing đo được); 40 ns đủ (dư 1,2 ns ở cấp 6).
   - Không có clock thứ hai.
 - **Sửa so với 24/09:** IMEM phải được địa chỉ bằng `next_pc` ở pha A. Nếu IMEM chốt `PC` ở giữa chu kỳ thì không còn chỗ cho DMEM. Lý do này phải có trong mục "vì sao chọn" của báo cáo.
 - Reset: khi `rst = 1` thì `next_pc` ép về 0, nên sau reset thanh ghi đầu ra IMEM đã chứa `mem[0]`.

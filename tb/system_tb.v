@@ -586,7 +586,12 @@ module system_tb;
         wait_ms(40);                                     // G_N = 50: 1 vòng firmware ~10 ms mô phỏng; LF → đặt giờ đo được
                                                          // 25 ms, 31 ms từ 27/10 (chép bộ đệm đôi 300 chu kỳ = 6 µs chip thật)
         check(dut.day == 64284 && dut.dow == (64284 + 6) % 7, "$T: ngay 64284, thu = (ngay + 6) mod 7");
-        check(dut.ms >= 54149696 && dut.ms < 54149696 + 30, "$T: ms = 54 149 696 (+ vai ms)");
+        // Firmware bù trễ LF → tick nạp (SET_MS = T + M + 1 − B, audit CAL-BIAS-01): 40 ms sau LF chip phải ở T + 40
+        // (± 1 ms lấy mẫu). Trước 05/11 chip chậm 25–31 ms sau mỗi lần sync (cửa sổ cũ [T, T + 30) chấp nhận điều đó).
+        // Ở G_N = 50, 1 ms mô phỏng chỉ ~25 lệnh: trễ vào handler + đoạn M → ARM (~1–2 ms ở đây, vài µs ở board) làm
+        // chip ra T + 38 (đo 05/11) → cận dưới 36. Polling: B chụp trễ tới 1 vòng chính (~10 ms) → đo T + 32, cận 20.
+        $display("  $T: 40 ms sau LF chip o T + %0d ms", dut.ms - 54149696);
+        check(dut.ms >= 54149696 + (poll ? 20 : 36) && dut.ms <= 54149696 + 41, "$T: ms = T + 40 ms sau LF (bu tre LF -> nap)");
         d0 = dut.ms;
         usend("$T,82685073,36744*62");                   // sai checksum
         usend("$T,1028,5*6a");                           // checksum chữ thường

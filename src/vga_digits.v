@@ -25,7 +25,10 @@ module vga_map (
     output reg        hit       // 1 = điểm này nằm trong 1 đoạn (có thể sáng); 0 = nền
 );
     // Màn rộng 640 chia 8 cột, mỗi cột 80 điểm cho 1 chữ số. col = x / 80, u = x lẻ trong cột.
-    wire [2:0] col = x[9:4] / 3'd5;         // x / 80 = (x / 16) / 5 với x < 640 (col ≤ 7)
+    // x / 80 bằng 7 phép so sánh song song. Bộ chia tổng quát x[9:4] / 5 cũ nằm trên đường găng của cả SoC
+    // (nextpnr ECP5 cấp tốc độ 8, SoC G2: 36,5 MHz → 53,3 MHz, audit TIM-01). x ≥ 640 → 7, vô hại vì in = 0.
+    wire [2:0] col = (x >= 10'd560) ? 3'd7 : (x >= 10'd480) ? 3'd6 : (x >= 10'd400) ? 3'd5 : (x >= 10'd320) ? 3'd4 :
+                     (x >= 10'd240) ? 3'd3 : (x >= 10'd160) ? 3'd2 : (x >= 10'd80)  ? 3'd1 : 3'd0;
     wire [6:0] u   = x - {col, 6'd0} - {col, 4'd0};   // x − 80·col
     wire [9:0] v   = y - 10'd160;           // chữ số chỉ vẽ ở dải y từ 160 tới 320 (cao 160 điểm)
     wire       in  = (x < 10'd640) && (y >= 10'd160) && (y < 10'd320);
