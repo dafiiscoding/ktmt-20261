@@ -1,0 +1,348 @@
+## A1 · ALU, bộ nhân chia muldiv, bộ chuyển đổi bcd
+
+### Bản đồ
+
+:::ban-do
+Trong toàn bộ cấu trúc phần cứng của WatchChip, các khối số học đóng vai trò là "cơ bắp" tính toán cốt lõi của bộ vi xử lý, nằm trực tiếp ở tầng thực thi (EX - Execute) của CPU.
+
+Vị trí và nhiệm vụ của từng khối số học trên sơ đồ kiến trúc:
+- **Khối tính toán số học và logic ALU (`src/alu.v`):** mạch tổ hợp thuần túy (combinational logic, không chứa đồng hồ clock bên trong, đầu vào thay đổi thì đầu ra đổi ngay lập tức). Thực hiện 8 phép toán cơ bản gồm cộng `addu`, trừ `subu`, các phép toán thao tác bit `and`, `or`, `xor`, phép so sánh có dấu `slt`, dịch trái logic `sll` và dịch phải số học bảo toàn bit dấu `sra`.
+- **Bộ nhân và chia số học `muldiv` (`src/muldiv.v`):**
+  - Phép nhân `mul`: mạch nhân tổ hợp thực hiện nhân hai số 32 bit, lấy 32 bit thấp của kết quả đưa thẳng về thanh ghi đích `rd` trong đúng 1 chu kỳ mà không làm thay đổi hai thanh ghi đặc thù `HI` và `LO`.
+  - Phép chia `div`: mạch tuần tự 32 bước theo thuật toán chia khôi phục (restoring division). Tổng thời gian thực thi trọn vẹn là 33 chu kỳ CPU (gồm 1 chu kỳ chốt toán hạng và 32 chu kỳ chia từng bit). Kết quả lưu tại hai thanh ghi chuyên biệt: `LO` chứa thương số và `HI` chứa số dư. Trong suốt 32 bước chia, cờ `busy = 1` được kích hoạt để đóng băng CPU chờ dữ liệu. Riêng trường hợp chia cho số 0, mạch hoàn tất ngay ở chu kỳ đầu tiên, trả về `LO = 0`, `HI = số bị chia` và bật cờ cảnh báo `DZ = 1`.
+- **Bộ chuyển đổi nhị phân sang thập phân BCD (`src/bcd_unit.v`):**
+  - Chuyển đổi một số nguyên nhị phân từ 0 đến 99 999 999 thành 8 chữ số thập phân (mỗi chữ số chiếm 4 bit, gọi là mã BCD - Binary Coded Decimal) để đưa ra mạch quét LED 7 đoạn và màn hình VGA.
+  - Vận hành theo thuật toán dịch và cộng 3 (Double Dabble) với 27 bước lặp. Phiên bản tuần tự thực thi trong 28 chu kỳ CPU giúp tiết kiệm tối đa diện tích cổng logic, trong khi phiên bản tổ hợp tạo ra kết quả tức thì trong 1 chu kỳ nhưng tốn thêm tài nguyên mạch.
+- **Môi trường kiểm thử đơn vị `tb/alu_tb.v`:** nạp file dữ liệu mẫu chuẩn `tb/vectors/alu.txt` chứa 4 200 trường hợp kiểm thử độc lập, rà soát mọi góc biên của 8 phép toán ALU nhằm bảo đảm không có bất kỳ sai sót logic nào.
+:::
+
+### Câu hỏi mở bài
+
+Vì sao máy trừ hai số mà so sánh vẫn có thể sai?
+
+Trong tư duy toán học thông thường, để so sánh xem số nguyên $A$ có nhỏ hơn số nguyên $B$ hay không (tương ứng với lệnh `slt` - set if less than trong tập lệnh MIPS), cách tự nhiên nhất là lấy hiệu số $A - B$:
+- Nếu hiệu số là một số âm (nghĩa là bit dấu cao nhất bằng 1), ta kết luận $A < B$.
+- Ngược lại, nếu hiệu số là số dương hoặc bằng 0 (bit dấu bằng 0), ta kết luận $A \ge B$.
+
+Thế nhưng, trên phần cứng máy tính xử lý số nguyên 32 bit theo chuẩn số bù hai, cách làm ngây thơ này sẽ dẫn đến sai lầm nghiêm trọng khi xảy ra hiện tượng **tràn số (overflow)**:
+- Hãy xét trường hợp cực trị: số bị trừ $A = -2^{31} = -2\,147\,483\,648$ (đây là số âm nhỏ nhất có thể lưu trữ trong một từ 32 bit, biểu diễn nhị phân là `0x80000000`).
+- Số trừ là một số dương nhỏ: $B = 1$.
+- Xét trên trục số học thực tế, rõ ràng $-2\,147\,483\,648$ nhỏ hơn $+1$ rất nhiều. Lệnh so sánh `slt` bắt buộc phải trả về giá trị 1 (đúng).
+- Tuy nhiên, khi bộ trừ của ALU thực hiện phép tính $A - B = -2\,147\,483\,648 - 1$, kết quả toán học đúng phải là $-2\,147\,483\,649$. Giá trị này vượt quá giới hạn biểu diễn của số âm 32 bit và lập tức bị cuộn tràn sang miền số dương lớn nhất: $+2\,147\,483\,647$ (mã hex là `0x7FFFFFFF`).
+- Lúc này, bit dấu cao nhất (bit thứ 31) của hiệu số mang giá trị `0` (báo hiệu số dương)!
+- Nếu mạch phần cứng chỉ căn cứ đơn thuần vào bit dấu của hiệu số để so sánh, máy tính sẽ kết luận rằng $A \ge B$ (nghĩa là $-2\,147\,483\,648 \ge 1$), một kết luận hoàn toàn sai lệch!
+
+Làm thế nào để bộ xử lý ALU luôn so sánh chính xác tuyệt đối trong mọi tình huống mà không bị hiện tượng tràn số đánh lừa?
+
+### Trực giác
+
+Hãy tiếp cận bản chất của các phép toán phần cứng thông qua những hình ảnh đời thường:
+
+- **So sánh số học và cách né bẫy tràn số:**
+  - Hãy hình dung bạn đang so sánh nhiệt độ giữa hai vùng đất để xem nơi nào lạnh hơn: vùng $A$ và vùng $B$.
+  - Nếu vùng $A$ đang có nhiệt độ âm (dưới $0^\circ\text{C}$) còn vùng $B$ có nhiệt độ dương (trên $0^\circ\text{C}$): bạn có cần phải bấm máy tính làm phép trừ độ chênh lệch nhiệt độ không? Hoàn toàn không! Hai vùng đất khác dấu nhau thì vùng đất mang dấu âm hiển nhiên là vùng lạnh hơn. Bất kể độ chênh lệch lớn đến đâu, cứ số âm là nhỏ hơn số dương.
+  - Ngược lại, khi cả hai vùng cùng mang dấu âm hoặc cùng mang dấu dương (hai số cùng dấu): khoảng cách giữa hai số cùng dấu không bao giờ vượt quá dung lượng đo của nhiệt kế. Khi đó, phép trừ hai số cùng dấu tuyệt đối không bao giờ bị tràn số, và bit dấu của hiệu số sẽ luôn luôn phản ánh sự thật 100%!
+  - Đó chính là nguyên lý của dòng mã ngắn gọn trong bộ ALU: nếu hai số khác dấu, kết quả so sánh lấy ngay bit dấu của số $A$ (nếu $A$ âm thì chắc chắn $A < B$); chỉ khi hai số cùng dấu, mạch mới dùng bit dấu của hiệu số trừ `diff[31]`.
+
+- **Thuật toán chia khôi phục (Restoring Division):**
+  - Thuật toán này mô phỏng chính xác từng bước đặt tính chia bằng tay trên giấy của học sinh tiểu học:
+    - Xét phép chia 7 cho 2 ($7 / 2$):
+      - Số bị chia 7 viết nhị phân 4 bit là `0111_b`, số chia 2 là `0010_b`.
+      - Ta cầm từng chữ số nhị phân của số bị chia từ trái qua phải, kéo dần vào "khung nhẩm tính" (thanh ghi số dư).
+      - Tại mỗi bước, ta làm một phép tính nhẩm: lấy giá trị trong khung nhẩm tính trừ đi số chia.
+      - Nếu trừ được (hiệu số không âm): ta ghi nhận số 1 vào hàng thương số và giữ lại hiệu số mới.
+      - Nếu trừ không được (hiệu số bị âm, nghĩa là số chia lớn hơn số đang có): ta ghi nhận số 0 vào hàng thương số và "khôi phục" lại số cũ (xóa phép trừ nháp, giữ nguyên giá trị số dư trước đó).
+      - Lặp lại liên tục đủ 32 lần cho 32 bit, ta sẽ nhận được trọn vẹn thương số ở thanh ghi `LO` và số dư cuối cùng ở thanh ghi `HI`.
+  - Đối với phép chia có số âm (như $−7 / 2$ hoặc $7 / −2$):
+    - Phần cứng không chia trực tiếp số bù hai vì dấu âm sẽ làm rối loạn các phép dịch bit.
+    - Phần cứng khôn ngoan chuyển đổi cả hai số về giá trị tuyệt đối không dấu: $|-7| = 7$ và $|2| = 2$.
+    - Thực hiện phép chia dương bình thường: 7 chia 2 được thương bằng 3 và số dư bằng 1.
+    - Ở bước kết thúc, mạch điều chỉnh dấu theo quy tắc đại số:
+      - Thương số sẽ mang dấu âm nếu hai toán hạng ban đầu trái dấu nhau: vì số bị chia âm và số chia dương nên thương đổi thành $−3$.
+      - Phần dư luôn luôn mang cùng dấu với số bị chia ban đầu: vì số bị chia là $−7$ (mang dấu âm) nên phần dư cuối cùng được đổi dấu thành $−1$.
+      - Kiểm chứng lại tính toàn vẹn: $(-3) \times 2 + (-1) = -6 - 1 = -7$. Phép chia hoàn toàn chuẩn xác!
+
+- **Thuật toán Double Dabble (Dịch và cộng 3):**
+  - Bộ vi xử lý tính toán mọi thứ bằng hệ nhị phân (cứ gom đủ 2 đơn vị thì nhớ 1 sang hàng bên trái), nhưng con người lại đọc các con số trên mặt đồng hồ bằng hệ thập phân (gom đủ 10 đơn vị thì nhớ 1).
+  - Thuật toán Double Dabble giải quyết bài toán này bằng cách đẩy từng bit của số nhị phân từ trái sang phải vào các ô nhớ 4 bit đại diện cho từng chữ số thập phân (gọi là ô BCD). Mỗi lần dịch một bit sang trái bản chất là nhân đôi giá trị đang có.
+  - Thế nhưng, trong hệ thập phân, nếu một chữ số nhân đôi mà vượt quá 9 (nghĩa là giá trị ban đầu là 5, 6, 7, 8, 9 nhân đôi lên thành 10, 12, 14, 16, 18), nó phải tạo ra một đơn vị nhớ nhảy sang hàng chục và giữ lại phần dư ở hàng đơn vị.
+  - Trong ô nhớ nhị phân 4 bit thông thường, số 10 được biểu diễn là `1010_b`. Nó chưa hề làm tràn ô 4 bit (bởi vì ô 4 bit phải đạt tới 16 mới tràn), do đó nếu cứ nhân đôi bình thường thì số 10 sẽ bị kẹt lại trong một ô thay vì tách sang hàng chục!
+  - Mẹo toán học thông minh: Nếu một chữ số BCD đang có giá trị $\ge 5$, ta chủ động **cộng 3** vào chữ số đó trước khi thực hiện dịch trái nhân đôi!
+    - Khi đó: $(x + 3) \times 2 = 2x + 6$.
+    - Vì $x \ge 5$ nên $2x \ge 10$, dẫn tới $2x + 6 \ge 16$!
+    - Con số 16 này vừa vặn làm tràn ô nhớ 4 bit, đẩy đúng một bit 1 sang chữ số hàng chục kế bên.
+    - Phần giá trị còn lại nằm trong ô hàng đơn vị là: $(2x + 6) - 16 = 2x - 10$, chính là phần dư thập phân mà ta mong đợi!
+    - Ví dụ cụ thể: Chữ số đang là 5. Ta cộng 3 thành 8 (`1000_b`). Sau đó dịch trái nhân đôi thành 16 (`10000_b`): bit 1 lập tức nhảy sang hàng chục, ô hàng đơn vị còn lại đúng số 0, tạo thành số 10 thập phân hoàn hảo!
+
+### Cơ chế theo đường tín hiệu
+
+Chi tiết hoạt động phần cứng của từng khối số học trong mã nguồn WatchChip:
+
+1. **Khối ALU 32-bit (`src/alu.v`):**
+   - ALU nhận hai toán hạng 32 bit `a` và `b`, một trường độ dịch `shamt` 5 bit (giá trị 0 đến 31) và mã chọn phép tính 4 bit `ctl`.
+   - Mạch luôn luôn tính sẵn phép trừ:
+     `wire [31:0] diff = a - b;`
+   - Cơ chế xác định cờ nhỏ hơn `lt` cho lệnh `slt`:
+     `wire lt = (a[31] != b[31]) ? a[31] : diff[31];`
+     - Nếu bit dấu khác nhau (`a[31] != b[31]`): kết quả `lt` lấy thẳng giá trị bit `a[31]` (nếu $a$ âm thì $a[31] = 1 \rightarrow lt = 1$; nếu $a$ dương thì $a[31] = 0 \rightarrow lt = 0$).
+     - Nếu bit dấu giống nhau (`a[31] == b[31]`): phép trừ không bao giờ tràn, kết quả `lt` lấy bit dấu của hiệu số `diff[31]`.
+   - Kết quả đầu ra của `slt` được mở rộng 31 bit 0 ở phía trước: `y = {31'd0, lt}`.
+   - Các phép dịch bit:
+     - Lệnh `sll` (Shift Left Logical): thực hiện dịch trái toán hạng `b` theo số bước `shamt`: `y = b << shamt`. Các vị trí trống bên phải được điền bit 0.
+     - Lệnh `sra` (Shift Right Arithmetic): thực hiện dịch phải số học toán hạng `b`: `y = $unsigned($signed(b) >>> shamt)`. Toán tử `>>>` sao chép bit dấu `b[31]` vào các vị trí trống bên trái để bảo toàn dấu âm dương của số nguyên.
+   - Cờ bằng 0 (`zero`): được gán bằng biểu thức so sánh tổ hợp `assign zero = (y == 32'd0);`. Tín hiệu này được đưa về khối điều khiển nhánh của CPU để quyết định việc nhảy cho các lệnh `beq`, `bne`.
+
+2. **Bộ nhân chia tuần tự `muldiv.v`:**
+   - Phép nhân `mul`: được thực hiện tức thì thông qua biểu thức tổ hợp `assign mul_y = a * b;`. Mạch chỉ trích xuất 32 bit thấp của tích số, bỏ qua 32 bit cao. Theo thiết kế kiến trúc của WatchChip, lệnh `mul` ghi trực tiếp vào thanh ghi đích `rd` và tuyệt đối giữ nguyên nội dung hai thanh ghi `HI`, `LO`.
+   - Phép chia `div` (Restoring Division):
+     - Chu kỳ nạp (khi có xung `start = 1` và mạch đang rảnh `!run`):
+       - Kiểm tra chia cho 0: Nếu toán hạng chia `b == 0` (`div0 = 1`), mạch lập tức bật cờ `dz <= 1`, gán `lo <= 0`, `hi <= a`, và phát xung báo xong `done = 1` ngay trong chu kỳ đầu tiên mà không khởi động bộ đếm 32 bước.
+       - Nếu $b \ne 0$: Mạch bật cờ bận `run <= 1`, đặt lại bộ đếm `cnt <= 0`, nạp số dư `rem <= 0`, chuyển đổi hai toán hạng sang giá trị tuyệt đối: `quo <= a[31] ? -a : a;` và `dvs <= b[31] ? -b : b;`. Ghi nhớ dấu cần điều chỉnh: `neg_q <= a[31] ^ b[31];` (thương âm khi hai số khác dấu) và `neg_r <= a[31];` (dư cùng dấu với số bị chia).
+     - Giai đoạn 32 bước chia tuần tự (từ chu kỳ 2 đến 33, ứng với `cnt` từ 0 đến 31):
+       - Dịch số dư và kéo bit: `wire [32:0] rem_sh = {rem, quo[31]};` (ghép số dư hiện tại với bit cao nhất của thương số tạm thời thành một từ 33 bit).
+       - Thử làm phép trừ: `wire [32:0] trial = rem_sh - {1'b0, dvs};`. Việc dùng độ rộng 33 bit cho phép quan sát trực tiếp bit dấu tràn ở vị trí `trial[32]`.
+       - Đánh giá khả năng trừ: `wire fits = ~trial[32];`. Nếu `trial[32] == 0` (nghĩa là hiệu số $\ge 0$, trừ vừa vặn) thì `fits = 1`.
+       - Khôi phục số dư: `wire [31:0] rem_n = fits ? trial[31:0] : rem_sh[31:0];`. Nếu trừ vừa thì nhận giá trị mới của `trial`; nếu không vừa thì khôi phục lại giá trị `rem_sh`.
+       - Cập nhật thương số: `wire [31:0] quo_n = {quo[30:0], fits};` (dịch các bit thương sang trái và chèn bit `fits` mới vào vị trí thấp nhất).
+       - Bộ đếm tăng dần: `cnt <= cnt + 1;`.
+     - Chu kỳ kết thúc (chu kỳ thứ 33, khi `cnt == 31` và cờ `last = 1`):
+       - Phát cờ hoàn thành `done = 1` và hạ cờ bận `run <= 0`.
+       - Điều chỉnh dấu đại số và chốt vào thanh ghi:
+         `lo <= neg_q ? -quo_n : quo_n;`
+         `hi <= neg_r ? -rem_n : rem_n;`
+       - Xóa cờ chia 0: `dz <= 0;`.
+     - Trong suốt toàn bộ 32 bước chia, tín hiệu `busy = run` được kích hoạt ở mức cao. Tại lõi CPU G1, cờ `busy` giữ nguyên giá trị bộ đếm chương trình `PC`. Tại lõi CPU G2, cờ `busy` làm đóng băng các tầng thanh ghi đường ống, ngăn không cho các lệnh phía sau (như `mflo`, `mfhi`) đọc sai dữ liệu chưa hoàn tất.
+
+3. **Bộ chuyển đổi BCD `bcd_unit.v`:**
+   - Đầu vào là một từ 32 bit `x`. Mạch kiểm tra giới hạn: `wire ovf = (x > 32'd99999999);`. Nếu số cần đổi vượt quá 99 999 999 (vượt quá 8 chữ số thập phân), mạch báo lỗi bằng cách trả về giá trị `0xFFFFFFFF` và kết thúc ngay ở chu kỳ đầu tiên.
+   - Với các số hợp lệ, thuật toán Double Dabble thực hiện qua 27 bước lặp liên tiếp:
+     - Hàm `add3`: chia từ 32 bit thành 8 nhóm, mỗi nhóm 4 bit đại diện cho một chữ số thập phân. Nhóm nào có giá trị $\ge 5$ thì tự động cộng thêm 3.
+     - Dịch chuyển: lấy kết quả sau khi cộng 3, dịch trái 1 bit và kéo bit nhị phân tiếp theo của số đầu vào vào vị trí thấp nhất:
+       `wire [31:0] d_n = {add3(d)} << 1 | {31'd0, b[26]};`
+   - Bản tuần tự (`G_COMB = 0`): chạy bằng một bộ đếm `cnt` từ 0 đến 26, mất 27 nhịp xung nhịp để tính toán cộng với 1 nhịp nạp ban đầu, tổng cộng mất đúng 28 chu kỳ CPU.
+   - Bản tổ hợp (`G_COMB = 1`): trải 27 tầng logic nối tiếp nhau trong một hàm tổ hợp duy nhất, cho ra kết quả ngay lập tức trong 1 chu kỳ CPU nhưng làm đường trễ lan truyền dài hơn.
+
+### Bảng chu kỳ hoặc tính tay
+
+:::suy-dan
+Thực hiện tính tay chi tiết từng bước cho hai thuật toán số học cốt lõi: phép chia khôi phục 4 bit và phép đổi Double Dabble từ nhị phân sang BCD.
+
+**Bài toán 1: Phép chia khôi phục số dương $7 / 2$**
+- Số bị chia $A = 7 = 0111_b$ (4 bit), Số chia $B = 2 = 0010_b$ (4 bit).
+- Trạng thái ban đầu: $DVS = 0010_b$, thanh ghi số dư $REM = 0000_b$, thanh ghi thương $QUO = 0111_b$.
+---
+Quá trình tính toán diễn ra qua 4 bước:
+
+| Bước | Hành động | Dịch $\{REM, QUO[3]\}$ | Thử trừ: $REM\_sh - DVS$ | Đánh giá $fits$ | Cập nhật $REM$ | Cập nhật $QUO$ |
+|---|---|---|---|---|---|---|
+| Khởi tạo | Nạp toán hạng | — | — | — | `0000` | `0111` |
+| Bước 1 | Kéo bit $QUO[3]=0$ | `00000` (0) | $0 - 2 = -2$ (âm) | 0 (trừ hỏng) | `0000` (khôi phục) | `1110` |
+| Bước 2 | Kéo bit $QUO[3]=1$ | `00001` (1) | $1 - 2 = -1$ (âm) | 0 (trừ hỏng) | `0001` (khôi phục) | `1100` |
+| Bước 3 | Kéo bit $QUO[3]=1$ | `00011` (3) | $3 - 2 = +1$ (dương) | 1 (trừ vừa) | `0001` (lấy hiệu) | `1001` |
+| Bước 4 | Kéo bit $QUO[3]=1$ | `00011` (3) | $3 - 2 = +1$ (dương) | 1 (trừ vừa) | `0001` (lấy hiệu) | `0011` |
+
+Kết quả sau 4 bước:
+- Thương số nằm ở thanh ghi $QUO = 0011_b = 3$.
+- Số dư nằm ở thanh ghi $REM = 0001_b = 1$.
+- Kiểm tra đẳng thức số học: $7 = 3 \times 2 + 1$. Phép tính hoàn toàn chính xác!
+
+**Bài toán 2: Phép chia số âm $−7 / 2$ và ca chia cho 0**
+1. Phép chia $−7 / 2$:
+   - Bước 1: Lấy trị tuyệt đối: $|-7| = 7$ và $|2| = 2$.
+   - Bước 2: Thực hiện phép chia số dương $7 / 2$ nhận được thương tạm thời bằng 3 và số dư tạm thời bằng 1.
+   - Bước 3: Xác định dấu:
+     - Số bị chia mang dấu âm ($a[31] = 1$), số chia mang dấu dương ($b[31] = 0$). Hai số khác dấu nên $neg\_q = 1 \oplus 0 = 1 \rightarrow$ thương số đổi dấu thành $LO = -3$.
+     - Dấu của số dư lấy theo dấu số bị chia: $a[31] = 1 \rightarrow neg\_r = 1 \rightarrow$ số dư đổi dấu thành $HI = -1$.
+   - Kiểm tra tính nhất quán: $\text{Thương} \times \text{Số chia} + \text{Số dư} = (-3) \times 2 + (-1) = -6 - 1 = -7$.
+2. Phép chia cho 0 ($A / 0$):
+   - Mạch nhận diện $b = 0$, không khởi động 32 bước chia mà lập tức trả về kết quả ở chu kỳ 1:
+     $LO = 0$, $HI = A$, cờ báo chia không $DZ = 1$.
+
+**Bài toán 3: Tính tay thuật toán Double Dabble đổi số nhị phân 53 sang BCD**
+- Số nhị phân đầu vào: $53 = 0110101_b$ (7 bit).
+- Ta sử dụng 2 ô BCD 4 bit: Hàng chục và Hàng đơn vị. Ban đầu cả hai ô đều bằng 0: `[0000] [0000]`.
+- Quy tắc: Trước mỗi lần dịch trái, ô nào $\ge 5$ thì cộng thêm 3. Sau đó dịch trái và kéo bit nhị phân vào.
+
+| Bước | Bit nhị phân kéo vào | Hàng chục | Hàng đơn vị | Thao tác cộng 3 (nếu $\ge 5$) | Thao tác dịch trái |
+|---|---|---|---|---|---|
+| Khởi tạo | `0110101` | `0000` (0) | `0000` (0) | Cả hai $< 5$, không cộng | — |
+| Bước 1 | Bit `0` | `0000` | `0000` | Không cộng | Dịch trái $\rightarrow$ `0000 0000` |
+| Bước 2 | Bit `1` | `0000` | `0000` | Không cộng | Dịch trái $\rightarrow$ `0000 0001` (1) |
+| Bước 3 | Bit `1` | `0000` | `0001` | Không cộng | Dịch trái $\rightarrow$ `0000 0011` (3) |
+| Bước 4 | Bit `0` | `0000` | `0011` | Không cộng | Dịch trái $\rightarrow$ `0000 0110` (6) |
+| Bước 5 | Bit `1` | `0000` | `0110` (6) | Đơn vị $\ge 5 \rightarrow$ cộng 3 thành 9 (`1001`) | Dịch trái $\rightarrow$ `0001 0011` (Chục: 1, Đơn vị: 3) |
+| Bước 6 | Bit `0` | `0001` (1) | `0011` (3) | Cả hai $< 5$, không cộng | Dịch trái $\rightarrow$ `0010 0110` (Chục: 2, Đơn vị: 6) |
+| Bước 7 | Bit `1` | `0010` (2) | `0110` (6) | Đơn vị $\ge 5 \rightarrow$ cộng 3 thành 9 (`1001`) | Dịch trái $\rightarrow$ `0101 0011` (Chục: 5, Đơn vị: 3) |
+
+Kết quả nhận được sau bước 7:
+- Ô Hàng chục: `0101_b` = 5.
+- Ô Hàng đơn vị: `0011_b` = 3.
+- Ghép lại thành mã BCD: `0x53`, đúng bằng số 53 thập phân!
+:::
+
+### Trong chip
+
+:::trong-chip
+Đoạn mã Verilog then chốt xử lý so sánh có dấu `slt` loại trừ hoàn toàn rủi ro tràn số nằm tại các dòng 20 đến 26 của tệp `src/alu.v`:
+
+{{trich:src/alu.v:20-27@diff}}
+
+Phân tích chi tiết từng tín hiệu trong đoạn code:
+- **Dòng 20 (`wire [31:0] diff = a - b;`):** Mạch thực hiện phép trừ nhị phân 32 bit giữa toán hạng `a` và toán hạng `b`. Đầu ra `diff` là hiệu số chưa xét tràn số.
+- **Dòng 26 (`wire lt = (a[31] != b[31]) ? a[31] : diff[31];`):**
+  - Biểu thức điều kiện kiểm tra xem hai toán hạng có khác dấu hay không qua phép so sánh `a[31] != b[31]`. Bit thứ 31 chính là bit dấu của số bù hai (0 là dương, 1 là âm).
+  - Nhánh 1 (khác dấu): Nếu `a[31] != b[31]`, nghĩa là một số âm và một số dương. Số âm chắc chắn luôn nhỏ hơn số dương mà không cần bận tâm đến độ lớn. Vì vậy, điều kiện $a < b$ được thỏa mãn khi và chỉ khi số `a` là số âm, tức là lấy thẳng giá trị của `a[31]`. Việc này tránh hoàn toàn phép trừ có thể gây tràn số cực đại.
+  - Nhánh 2 (cùng dấu): Nếu `a[31] == b[31]`, phép trừ hai số cùng dấu có kết quả luôn nằm gọn trong dải biểu diễn 32 bit, tuyệt đối không bao giờ xảy ra hiện tượng tràn số. Do đó, bit dấu của hiệu số `diff[31]` phản ánh trung thực kết quả so sánh (nếu `diff[31] == 1` tức hiệu âm, suy ra $a < b$).
+:::
+
+### Bẫy và thầy hay hỏi
+
+:::bay
+**Ngộ nhận rằng so sánh có dấu `slt` chỉ cần lấy hiệu $a - b$ rồi kiểm tra bit dấu 31 của hiệu số.**
+*Thực tế bản chất:* Đây là lỗi phổ biến nhất khi sinh viên tự viết ALU.
+- Nếu lấy số âm nhỏ nhất $A = -2^{31} = 0x80000000$ trừ đi số dương $B = 1$, phép toán $A - B$ bị tràn số sang miền số dương cực đại $0x7FFFFFFF$.
+- Bit thứ 31 của hiệu số lúc này bằng 0. Nếu chỉ nhìn vào bit 31 của hiệu số, mạch sẽ báo rằng $A \ge B$ (tức $-2^{31} \ge 1$), đảo ngược hoàn toàn logic so sánh đúng.
+- Do đó, bắt buộc phải tách hai trường hợp: khác dấu thì lấy ngay bit dấu của $a$, cùng dấu mới được nhìn bit dấu của hiệu số.
+:::
+
+:::bay
+**Lệnh chia `div` trên WatchChip tốn 32 chu kỳ hay 33 chu kỳ CPU?**
+*Thực tế bản chất:* Nhiều người nhầm lẫn rằng vì thanh ghi 32 bit nên phép chia chỉ tốn đúng 32 chu kỳ.
+- Trong mã nguồn `src/muldiv.v`, một phép chia hoàn chỉnh cần chính xác **33 chu kỳ CPU** (chu kỳ có tín hiệu cho phép `ce = 1`):
+  - Chu kỳ thứ 1: Nhận xung kích hoạt `start = 1`, nạp các toán hạng vào thanh ghi nội bộ và chuyển đổi sang giá trị tuyệt đối.
+  - Chu kỳ thứ 2 đến chu kỳ thứ 33: Bộ đếm `cnt` chạy từ 0 đến 31, thực hiện đúng 32 bước dịch và thử trừ của thuật toán chia khôi phục.
+  - Tại chu kỳ thứ 33 (bước cuối cùng), tín hiệu `done = 1` được phát ra đồng thời với việc sửa dấu đại số cho `lo` và `hi`. Lõi CPU chốt kết quả vào thanh ghi ở cạnh xung nhịp kết thúc chu kỳ này.
+- Riêng trường hợp chia cho 0, mạch kết thúc ngay lập tức ở chu kỳ thứ 1 mà không chạy qua 32 bước chia.
+:::
+
+:::bay
+**Lệnh nhân `mul` có ghi đè hai thanh ghi `HI` và `LO` giống như kiến trúc MIPS cổ điển hay không?**
+*Thực tế bản chất:* Trong kiến trúc MIPS I cổ điển, lệnh nhân `mult` đưa kết quả 64 bit vào cặp thanh ghi `HI` và `LO`.
+- Tuy nhiên, trong tập lệnh của WatchChip (tuân thủ đặc tả MIPS32 hiện đại), lệnh nhân được chọn là lệnh `mul` thuộc nhóm lệnh đặc biệt `SPECIAL2`:
+  - Lệnh `mul` thực hiện nhân hai số 32 bit và ghi trực tiếp 32 bit thấp của kết quả vào thanh ghi đích thông thường `rd`.
+  - Hai thanh ghi đặc thù `HI` và `LO` được giữ nguyên vẹn 100%, không bị thay đổi giá trị.
+  - Điều này mang lại lợi ích kiến trúc cực kỳ to lớn: phần mềm có thể thực hiện một phép nhân độc lập mà không làm hỏng kết quả của phép chia `div` vừa tính toán trước đó đang nằm trong `HI` và `LO`.
+:::
+
+:::bay
+**Tại sao trong thuật toán Double Dabble bắt buộc phải cộng 3 mà không phải cộng 1 hay cộng 2?**
+*Thực tế bản chất:* Con số 3 xuất phát trực tiếp từ mối quan hệ giữa trọng số cơ số 16 của 4 bit nhị phân và trọng số cơ số 10 của hệ thập phân.
+- Khi dịch trái một ô nhớ 4 bit, giá trị bên trong được nhân đôi ($2x$).
+- Nếu giá trị ban đầu $x \ge 5$, giá trị nhân đôi $2x \ge 10$. Trong hệ thập phân, giá trị 10 phải tràn sang hàng kế bên thành 1 đơn vị nhớ, để lại phần dư là $2x - 10$.
+- Tuy nhiên, một ô nhớ 4 bit chỉ tràn khi đạt tới $2^4 = 16$.
+- Để làm cho ngưỡng tràn thập phân (10) trùng khớp với ngưỡng tràn nhị phân (16), ta cần một lượng bù bằng đúng khoảng chênh lệch giữa hai hệ số: $16 - 10 = 6$.
+- Vì sau phép cộng ta sẽ thực hiện phép nhân đôi, lượng bù cần cộng vào trước khi nhân đôi chính là: $6 / 2 = 3$.
+- Nhờ cộng 3, ta có: $(x + 3) \times 2 = 2x + 6 = (2x - 10) + 16$. Bit 16 tự động tràn sang cột hàng chục, còn lại đúng phần dư $2x - 10$ trong ô hàng đơn vị.
+:::
+
+### Sửa tại chỗ và ứng dụng
+
+:::sua-tai-cho
+**Tình huống cài lỗi thực tế:**
+Giả sử trong quá trình chỉnh sửa tệp `src/alu.v`, một thành viên sửa dòng tính cờ nhỏ hơn tại dòng 26: thay vì viết đầy đủ `(a[31] != b[31]) ? a[31] : diff[31]`, người này giản lược thành `wire lt = diff[31];` vì tin rằng chỉ cần nhìn bit dấu của hiệu số là đủ để so sánh.
+
+**Hậu quả trên hệ thống:**
+Mạch ALU vẫn chạy đúng với đa số các số dương và các số âm thông thường. Tuy nhiên, khi phần mềm thực hiện so sánh số âm nhỏ nhất với một số dương (ví dụ `slt $t0, $s0, $s1` với `$s0 = 0x80000000` và `$s1 = 1`), phép trừ bị tràn số khiến bit 31 của hiệu số bằng 0. Lệnh `slt` trả về 0 thay vì 1, làm đảo ngược hoàn toàn nhánh rẽ của các thuật toán xử lý dữ liệu và gây sụp đổ logic chương trình.
+
+**Bài kiểm tra nào sẽ bắt được lỗi này?**
+Lệnh chạy kiểm thử đơn vị:
+```bash
+bash tools/run_unit.sh alu muldiv bcd
+```
+Bài kiểm tra `tb/alu_tb.v` sẽ lập tức báo đỏ (FAIL).
+Lý do: Bộ kiểm tra `alu_tb.v` đọc file vector mẫu `tb/vectors/alu.txt` chứa 4 200 trường hợp kiểm thử độc lập. Trong tập dữ liệu này đã được thiết kế sẵn các ca kiểm thử biên cực trị với $a = 0x80000000$ và $b = 1$. Ngay khi chạy tới ca kiểm thử này, `alu_tb` phát hiện đầu ra $y = 0$ trong khi giá trị mong đợi $e\_y = 1$, in ra thông báo lỗi và dừng chương trình:
+```text
+loi ctl=5 a=80000000 b=00000001 sh=0: y=00000000 zero=1, can 00000001 0
+FAIL alu_tb 1 loi / 4200 ca
+```
+:::
+
+:::dung-o-dau
+**Kiến thức này được ứng dụng ở đâu ngoài dự án?**
+- **Thiết kế vi xử lý máy tính và vi điều khiển:** Nguyên lý so sánh bù hai chống tràn số của ALU là kiến thức kinh điển xuất hiện trong mọi kiến trúc vi xử lý thương mại như ARM Cortex, x86, RISC-V. Bất kỳ một kỹ sư thiết kế phần cứng nào cũng bắt buộc phải nắm vững quy tắc xử lý bit dấu này khi xây dựng khối số học tính toán.
+- **Mạch hiển thị trong đồng hồ số và thiết bị y tế:** Thuật toán Double Dabble là chuẩn mực công nghiệp được dùng phổ biến trên các chip FPGA và ASIC chuyên dụng để đổi số nhị phân sang định dạng BCD điều khiển màn hình LED 7 đoạn. Ta bắt gặp mạch này trong các thiết bị đo huyết áp điện tử, máy đo nồng độ oxy SpO2, đồng hồ bấm giờ thể thao và các loại cân điện tử thương mại.
+:::
+
+### Tự kiểm và quay lại bức tranh
+
+:::tu-luan
+Trình bày cơ chế so sánh có dấu của lệnh `slt` trong khối `src/alu.v` và giải thích chi tiết tại sao biểu thức `(a[31] != b[31]) ? a[31] : diff[31]` loại bỏ hoàn toàn nguy cơ sai sót do hiện tượng tràn số.
+---
+**Đáp án hoàn chỉnh:**
+- **Nguyên lý:** Phép so sánh hai số nguyên có dấu 32 bit theo chuẩn bù hai không thể chỉ dựa vào bit dấu của hiệu số $a - b$, vì phép trừ giữa một số âm cực tiểu và một số dương sẽ gây tràn số làm đảo ngược bit dấu của hiệu.
+- **Cơ chế biểu thức:**
+  - *Trường hợp 1 (khác dấu):* Khi $a[31] \ne b[31]$, hai số có một số dương và một số âm. Trong hệ thống số học, số âm luôn nhỏ hơn số dương. Do đó $a < b$ khi và chỉ khi $a$ là số âm, tương đương với $a[31] = 1$. Mạch lấy thẳng giá trị $a[31]$ làm kết quả mà không cần quan tâm đến hiệu số, loại bỏ 100% nguy cơ tràn số.
+  - *Trường hợp 2 (cùng dấu):* Khi $a[31] == b[31]$, cả hai số cùng dương hoặc cùng âm. Khoảng cách giữa hai số cùng dấu luôn nhỏ hơn giới hạn biểu diễn của số nguyên 32 bit, do đó phép trừ $a - b$ tuyệt đối không bao giờ xảy ra hiện tượng tràn số. Mạch lấy trực tiếp bit dấu của hiệu số $diff[31]$ để kết luận.
+:::
+
+:::tu-luan
+Phân tích nguyên lý hoạt động của bộ chia khôi phục `muldiv.v`, giải thích vì sao một phép chia thông thường cần chính xác 33 chu kỳ CPU và cách thức mạch xử lý trường hợp chia cho số 0.
+---
+**Đáp án hoàn chỉnh:**
+- **Nguyên lý chia khôi phục:** Mạch đưa các toán hạng về giá trị tuyệt đối không dấu. Trong mỗi bước, mạch dịch số dư sang trái 1 bit, kéo bit tiếp theo của số bị chia vào rồi thử trừ đi số chia. Nếu hiệu số không âm (trừ vừa), mạch ghi nhận bit thương bằng 1 và cập nhật số dư mới; nếu hiệu số bị âm (trừ hỏng), mạch ghi nhận bit thương bằng 0 và khôi phục lại số dư cũ.
+- **Thời gian 33 chu kỳ CPU:**
+  - Chu kỳ 1: CPU phát xung `start = 1`, mạch chốt toán hạng và chuyển đổi sang giá trị tuyệt đối.
+  - 32 chu kỳ tiếp theo: Bộ đếm chạy qua 32 bước để xác định đủ 32 bit của thương số.
+  - Chu kỳ thứ 33: Mạch phát cờ `done = 1`, hoàn tất việc điều chỉnh dấu đại số (thương âm khi hai số trái dấu, số dư cùng dấu số bị chia) và chốt dữ liệu vào hai thanh ghi `LO` và `HI`.
+- **Xử lý chia cho 0:** Khi toán hạng chia $b = 0$, mạch nhận diện ngay ở chu kỳ đầu tiên, không chạy qua 32 bước chia mà lập tức trả về `LO = 0`, `HI = a`, bật cờ cảnh báo `dz = 1` và kích hoạt xung `done = 1` kết thúc lệnh ngay trong 1 chu kỳ.
+:::
+
+:::tu-luan
+Giải thích thuật toán Double Dabble trong khối `bcd_unit.v`, chứng minh công thức cộng 3 khi một chữ số BCD $\ge 5$, và nêu rõ sự khác biệt giữa hai phiên bản tuần tự và tổ hợp.
+---
+**Đáp án hoàn chỉnh:**
+- **Nguyên lý Double Dabble:** Đổi số nhị phân sang BCD bằng cách dịch dần từng bit nhị phân vào các ô nhớ BCD 4 bit từ trái sang phải.
+- **Chứng minh công thức cộng 3:**
+  - Dịch trái tương đương với nhân đôi ($2x$).
+  - Khi chữ số $x \ge 5$, giá trị nhân đôi $2x \ge 10$, đòi hỏi phải tạo ra một đơn vị nhớ đẩy sang cột hàng chục và để lại phần dư $2x - 10$ ở hàng đơn vị.
+  - Ô nhớ 4 bit chỉ tràn khi đạt tới 16. Để tạo tràn ở giá trị 10, ta bù thêm $16 - 10 = 6$ đơn vị.
+  - Vì mạch thực hiện nhân đôi sau phép bù, giá trị cần cộng trước khi dịch là $6 / 2 = 3$. Sau khi cộng 3 và nhân đôi, ta có $(x + 3) \times 2 = 2x + 6 = 16 + (2x - 10)$, tạo đúng 1 bit tràn sang hàng chục và giữ lại đúng phần dư $2x - 10$.
+- **Khác biệt tuần tự và tổ hợp:**
+  - Bản tuần tự (`G_COMB = 0`): chạy 27 bước qua 28 chu kỳ CPU, tiết kiệm diện tích phần cứng.
+  - Bản tổ hợp (`G_COMB = 1`): trải 27 tầng logic nối tiếp, cho kết quả ngay trong 1 chu kỳ CPU nhưng tiêu tốn thêm khoảng 416 ô LUT và kéo dài đường trễ tín hiệu.
+:::
+
+:::mcq id=KT-A1-01
+? Tại sao trong mạch `src/alu.v`, phép so sánh có dấu `slt` không thể chỉ dựa thuần túy vào bit dấu 31 của hiệu số `diff = a - b`?
+- [ ] Vì bộ trừ nhị phân 32 bit của FPGA chỉ tính toán được các số nguyên không dấu chứ hoàn toàn không hỗ trợ các phép tính số bù hai
+- [ ] Vì bit dấu của hiệu số luôn bị trễ một chu kỳ xung nhịp so với thời điểm các toán hạng được nạp vào ALU
+- [x] Vì khi lấy số âm cực tiểu trừ đi một số dương, kết quả bị tràn số sang miền dương làm bit dấu bị đảo ngược
+- [ ] Vì phép trừ nhị phân sẽ tự động kích hoạt bẫy ngắt ngoại lệ làm dừng hoạt động của bộ vi xử lý G1
+> Giải thích: Khi lấy số âm nhỏ nhất (-2^31) trừ đi một số dương (như 1), kết quả toán học vượt quá khả năng biểu diễn của số bù hai 32 bit và bị cuộn tràn thành số dương (+2^31 - 1). Lúc này bit dấu của hiệu số bằng 0, khiến việc kiểm tra thuần túy bit dấu sẽ kết luận sai rằng số âm lớn hơn số dương. Do đó ALU bắt buộc phải kiểm tra điều kiện khác dấu trước để loại trừ hoàn toàn lỗi tràn số này.
+:::
+
+:::mcq id=KT-A1-02
+? Trong khối nhân chia `src/muldiv.v`, tổng thời gian để hoàn thành trọn vẹn một phép chia số nguyên thông thường `div` là bao nhiêu chu kỳ CPU?
+- [ ] Mất đúng 1 chu kỳ CPU vì mạch chia được thiết kế theo cấu trúc tổ hợp thuần túy hoàn thành tức thì
+- [ ] Mất 28 chu kỳ CPU tương ứng với số chu kỳ cần thiết để chuyển đổi các toán hạng sang mã BCD
+- [ ] Mất đúng 32 chu kỳ CPU tương ứng với độ rộng 32 bit của hai thanh ghi lưu trữ thương số và số dư mà không cần chu kỳ nào khác
+- [x] Mất chính xác 33 chu kỳ CPU gồm 1 chu kỳ chốt toán hạng và 32 chu kỳ lặp của thuật toán chia khôi phục
+> Giải thích: Phép chia tuần tự trong `muldiv.v` cần 1 chu kỳ đầu tiên nhận xung start để chốt toán hạng và chuyển sang giá trị tuyệt đối, sau đó bộ đếm chạy qua 32 bước (tương ứng 32 chu kỳ tiếp theo) để tính toán từng bit của thương số. Ở chu kỳ thứ 33 (bước cuối cùng), mạch mới phát xung done và chốt kết quả vào thanh ghi LO và HI.
+:::
+
+:::mcq id=KT-A1-03
+? Điểm khác biệt cơ bản nhất về mặt kiến trúc giữa lệnh nhân `mul` trên WatchChip và lệnh nhân `mult` trong chuẩn MIPS cổ điển là gì?
+- [x] Lệnh `mul` ghi 32 bit thấp vào thanh ghi đích `rd` và giữ nguyên nội dung của hai thanh ghi `HI`, `LO`
+- [ ] Lệnh `mul` bắt buộc phải chạy qua 32 chu kỳ tuần tự giống như phép chia thay vì thực hiện trong một chu kỳ
+- [ ] Lệnh `mul` tự động kích hoạt cờ chia cho 0 nếu một trong hai toán hạng đầu vào mang giá trị bằng không
+- [ ] Lệnh `mul` chỉ hỗ trợ nhân các số nguyên không dấu và không cho phép thực hiện phép nhân trên số bù hai
+> Giải thích: Trong chuẩn MIPS cổ điển, lệnh nhân ghi kết quả 64 bit vào cặp thanh ghi HI và LO. Ngược lại, lệnh mul thuộc nhóm SPECIAL2 trên WatchChip ghi trực tiếp 32 bit thấp của tích số vào thanh ghi đích rd, đồng thời giữ nguyên vẹn giá trị của HI và LO để không làm hỏng kết quả của các phép chia trước đó.
+:::
+
+:::mcq id=KT-A1-04
+? Trong thuật toán Double Dabble của khối `src/bcd_unit.v`, tại sao một chữ số BCD bắt buộc phải được cộng thêm 3 trước khi dịch trái nếu giá trị của nó đạt từ 5 trở lên?
+- [ ] Vì cộng thêm 3 giúp bộ đếm chu kỳ của thuật toán giảm bớt số bước tính toán từ 32 bước xuống còn 27 bước để tiết kiệm thời gian
+- [x] Vì phép cộng 3 bù đắp sự chênh lệch giữa ngưỡng tràn cơ số 16 của 4 bit nhị phân và ngưỡng tràn cơ số 10 của thập phân
+- [ ] Vì số 3 là hằng số hiệu chỉnh xung nhịp bắt buộc của phần cứng nhằm bảo đảm tín hiệu hiển thị không bị bóng ma
+- [ ] Vì phép cộng này giúp biến đổi các chữ số thập phân sang mã bù hai trước khi đưa vào thanh ghi lưu trữ
+> Giải thích: Khi dịch trái (nhân đôi), một chữ số >= 5 sẽ có giá trị >= 10, đòi hỏi phải tràn sang hàng kế bên. Tuy nhiên ô nhớ 4 bit chỉ tràn khi đạt tới 16. Khoảng chênh lệch giữa 16 và 10 là 6 đơn vị. Do đó, việc cộng trước 3 đơn vị trước khi nhân đôi sẽ tạo ra lượng bù đúng bằng 6 (vì (x + 3) * 2 = 2x + 6 = (2x - 10) + 16), giúp bit nhớ nhảy sang hàng chục chính xác theo quy tắc đếm thập phân.
+:::
+
+:::mcq id=KT-A1-05
+? Khi xảy ra trường hợp chia cho số 0 trong lệnh `div` (toán hạng chia $b = 0$), phần cứng `src/muldiv.v` sẽ xử lý như thế nào?
+- [ ] Phần cứng phát sinh biệt lệ ngắt phần cứng đưa con trỏ chương trình PC nhảy ngay về địa chỉ vector ngắt 0x180
+- [ ] Mạch chạy lặp vô tận trong 32 chu kỳ khiến cờ bận busy bị treo ở mức cao làm tê liệt hoàn toàn hệ thống
+- [x] Hoàn tất ngay ở chu kỳ đầu tiên, trả về giá trị LO = 0, HI = số bị chia và kích hoạt cờ cảnh báo DZ = 1
+- [ ] Tự động gán cả hai thanh ghi LO và HI về giá trị cực đại 0xFFFFFFFF để cảnh báo lỗi tràn số chia
+> Giải thích: Theo quy định kiến trúc của nhóm trong `isa-spec.md` và mã nguồn `src/muldiv.v`, phép chia cho 0 không làm treo chip hay phát sinh ngắt phần cứng. Mạch nhận diện ngay ở chu kỳ đầu tiên khi có xung start, gán LO = 0, HI = a, bật cờ dz = 1 và phát xung done kết thúc lệnh ngay lập tức mà không chạy 32 bước tuần tự.
+:::

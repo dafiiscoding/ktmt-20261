@@ -94,7 +94,7 @@ Spec: [`control-table.md`](control-table.md), [`mmio-map.md`](mmio-map.md), [`pi
 - **Vì sao G1 có "2 pha":** bộ nhớ lệnh và dữ liệu phải chờ 1 cạnh clock mới ra dữ liệu, nhưng CPU 1 chu kỳ cần cả hai ngay. Cách giải: mỗi chu kỳ CPU dùng 2 cạnh của clock 50 MHz ([`mmio-map.md`](mmio-map.md) §1.1), nên G1 chạy 25 MHz.
 - **Ngắt:** G1 nhận ở cuối lệnh (không phải hủy lệnh nào), `EPC` = lệnh kế tiếp chưa chạy, nhảy về 0x180. G2 nhận ở ranh giới ID/EX: lệnh ở EX/MEM/WB chạy nốt, lệnh ở IF/ID bị hủy.
 - **Thanh ghi ngoại vi:** địa chỉ âm (vùng cuối 4 GB), đọc bằng `lw` offset âm từ `$zero`. Ví dụ `MS_OF_DAY` = −252.
-- **Tự kiểm:** `bash tools/run_unit.sh regfile control cpu_pipe irq system`. Thử cài lỗi: đổi `EPC ← pc` thay vì `next_pc`.
+- **Tự kiểm:** `bash tools/run_unit.sh regfile control irq system` và `python tools/cosim_iss.py --rand 0` (G2 chạy qua lệnh này vì `cpu_pipe_tb` cần chương trình đi kèm). Thử cài lỗi: đổi `EPC ← pc` thay vì `next_pc`.
 - **Hay bị hỏi:** vì sao bộ nhớ lệnh chốt `next_pc` chứ không phải `PC` · ngắt đến lúc `div` đang chạy thì sao (chờ hết `busy`) · vì sao chặn ngắt ngay sau `mtc0`/`eret` · handler quên xóa `IRQ_PENDING` thì sao · vẽ datapath G1 trong 5 phút.
 
 ### TV4. Hiển thị, âm thanh, UART

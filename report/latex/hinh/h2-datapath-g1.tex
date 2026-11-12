@@ -1,0 +1,61 @@
+% H2: datapath CPU G1 (src/cpu_g1.v). Mỗi nhãn tên tín hiệu/module trên hình grep được trong src/.
+% Nền xanh = cập nhật ở pha A; nền cam = làm việc ở pha B; trắng = mạch tổ hợp; nét đứt = tín hiệu điều khiển từ control.
+\begin{tikzpicture}[
+    font=\footnotesize, >=Stealth, line width=0.5pt,
+    blk/.style={draw, rounded corners=1pt, align=center, inner sep=3pt},
+    pa/.style={blk, fill=blue!10},
+    pb/.style={blk, fill=orange!18},
+    cmb/.style={blk, fill=white},
+    dat/.style={->},
+    ctl/.style={->, dashed, gray!60!black},
+    lbl/.style={inner sep=1.5pt, fill=white, font=\scriptsize}
+]
+% ---------------- khối
+\node[pa]  (pc)   at (0.9,4.0)   {\texttt{pc}};
+\node[pa]  (imem) at (3.4,4.0)   {\texttt{imem}\\\texttt{instr}};
+\node[pa]  (rf)   at (7.4,4.0)   {\texttt{regfile u\_rf}\\\texttt{rs\_v} \quad \texttt{rt\_v}};
+\node[cmb] (msrc) at (10.9,3.4)  {\texttt{alu\_src}\\0: \texttt{rt\_v}\\1: \texttt{imm\_x}};
+\node[cmb] (alu)  at (13.6,4.0)  {\texttt{alu u\_alu}\\(\texttt{alu\_ctl})\\\texttt{alu\_y}};
+\node[pb]  (mem)  at (16.6,4.0)  {\texttt{dmem}\\\texttt{bus\_addr}\\\texttt{bus\_re}\\\texttt{bus\_we}};
+\node[cmb] (imm)  at (7.9,1.6)   {\texttt{imm\_x}\\(\texttt{ext})};
+\node[cmb] (res)  at (13.4,1.6)  {\texttt{res}\\(\texttt{res\_sel})};
+\node[cmb] (wbm)  at (16.6,1.6)  {\texttt{wb}\\(\texttt{mem\_to\_reg})};
+\node[pa]  (cp0)  at (12.3,-0.7) {\texttt{status}, \texttt{epc}\\\texttt{cp0\_rd}};
+\node[pa]  (md)   at (15.2,-0.7) {\texttt{muldiv}, \texttt{bcd\_unit}\\\texttt{mul\_y} \texttt{hi} \texttt{lo} \texttt{bcd\_y}};
+\node[cmb] (ctl)  at (9.6,6.5)   {\texttt{control u\_ctl}};
+\node[cmb, text width=10.2cm] (npc) at (5.4,8.6)
+      {\texttt{next\_pc}: \texttt{rst}, \texttt{stall}, \texttt{eret}, \texttt{jr}, \texttt{j}/\texttt{jal}, \texttt{take}, \texttt{pc4} = \texttt{pc} + 4};
+% ---------------- lấy lệnh và tính PC
+\draw[dat] (npc.west) -- ++(-0.6,0) |- (pc.west);
+\draw[dat] (pc.north) -- node[lbl]{\texttt{pc}} (pc.north |- npc.south);
+\draw[dat] (imem.north |- npc.south) -- node[lbl]{\texttt{pc\_new}} (imem.north);
+% ---------------- lệnh đi ba nơi
+\fill (5.1,4.0) circle (1.4pt);
+\draw[dat] (imem.east) -- node[lbl,pos=.45]{\texttt{instr}} (rf.west);
+\draw[dat] (5.1,4.0) -- (5.1,6.5) -- node[lbl,pos=.6]{\texttt{instr}} (ctl.west);
+\draw[dat] (5.1,4.0) -- (5.1,1.6) -- node[lbl,pos=.55]{\texttt{imm}} (imm.west);
+% ---------------- thanh ghi, ALU, bộ nhớ
+\draw[dat] ($(rf.east)+(0,0.4)$) -- node[lbl,pos=.5]{\texttt{rs\_v}} ($(alu.west)+(0,0.4)$);
+\draw[dat] ($(rf.east)+(0,-0.4)$) -- node[lbl,pos=.4]{\texttt{rt\_v}} ($(msrc.west)+(0,0.2)$);
+\draw[dat] (imm.east) -| ($(msrc.west)+(-0.5,-0.2)$) -- ($(msrc.west)+(0,-0.2)$);
+\draw[dat] (msrc.east) -- ($(alu.west)+(0,-0.6)$);
+\draw[dat] (alu.east) -- node[lbl]{\texttt{maddr}} (mem.west);
+\draw[dat] (alu.south) -- node[lbl,pos=.5]{\texttt{alu\_y}} (alu.south |- res.north);
+\draw[dat] (cp0.north) -- ($(res.south west)+(0.4,0)$);
+\draw[dat] ($(md.north)+(-0.5,0)$) -- ($(res.south east)+(-0.4,0)$);
+\draw[dat] (mem.south) -- node[lbl]{\texttt{load\_v}} (wbm.north);
+\draw[dat] (res.east) -- (wbm.west);
+\draw[dat] (wbm.south) -- ++(0,-3.1) -| node[lbl,pos=.15]{\texttt{wb}} ($(rf.south west)+(0.4,0)$);
+% ---------------- điều khiển (nét đứt)
+\draw[ctl] ($(ctl.south)+(-0.4,0)$) |- ($(rf.north east)+(0.0,0.5)$) -- ($(rf.north east)+(-0.3,0)$);
+\node[lbl] at (8.4,5.3) {\texttt{reg\_write}, \texttt{dst}};
+\draw[ctl] (ctl.east) -| (msrc.north);
+\draw[ctl] (ctl.east) -| node[lbl,pos=.8,right]{\texttt{mem\_read}, \texttt{mem\_write}} (mem.north);
+\draw[ctl] (ctl.north) -- node[lbl]{\texttt{branch}, \texttt{jump}, \texttt{jump\_reg}, \texttt{cp0\_op}} (ctl.north |- npc.south);
+% ---------------- chú giải
+\node[pa,  minimum height=0.4cm, anchor=west] at (-0.4,-3.2) {pha A};
+\node[pb,  minimum height=0.4cm, anchor=west] at (1.5,-3.2)  {pha B};
+\node[cmb, minimum height=0.4cm, anchor=west] at (3.4,-3.2)  {tổ hợp};
+\draw[ctl] (5.4,-3.2) -- (6.4,-3.2);
+\node[anchor=west] at (6.5,-3.2) {tín hiệu điều khiển từ \texttt{control}};
+\end{tikzpicture}

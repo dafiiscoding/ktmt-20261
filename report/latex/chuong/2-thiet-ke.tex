@@ -1,54 +1,301 @@
-\chapter{PHƯƠNG PHÁP LUẬN VÀ THIẾT KẾ}
+\chapter{PHƯƠNG PHÁP LUẬN VÀ THIẾT KẾ}\label{chap:thiet-ke}
 
-\section{Công cụ và cấu trúc mã nguồn}
-\TODO{TV2. Verilog; iverilog + ModelSim (mô phỏng), Yosys (tổng hợp); Python (\texttt{asm.py}, \texttt{iss.py}, \texttt{cmp\_trace.py}); cây thư mục (\texttt{KE-HOACH} §6); testbench. Ghi rõ: không có Vivado/Quartus nên không có Fmax.}
+\section{Công cụ và cấu trúc mã nguồn}\label{sec:cong-cu}
+\subsection{Phạm vi của đề tài}
+Bốn điều sau đây áp dụng cho mọi số liệu trong báo cáo.
+\begin{itemize}
+  \item \textbf{Chỉ mô phỏng.} Không có board FPGA, không có chân vật lý. Mọi kết quả đến từ mô phỏng bằng Icarus Verilog, và ModelSim cho G2.
+  \item \textbf{Thời gian rút gọn.} Tham số \texttt{G\_N} là số xung hệ thống trong 1 ms. Thật là 50\,000 (xung 50 MHz); trong mô phỏng đặt $G_N = 50$, nên 1 ms của chip chỉ tốn 50 xung, ít hơn thật đúng 1000 lần. Số đo thời gian trong báo cáo vì thế tính theo chu kỳ hoặc theo ms \emph{của chip rút gọn}, không phải giây đồng hồ treo tường.
+  \item \textbf{Không có Fmax.} Nhóm không có Vivado hay Quartus, nên không có bước đặt và nối dây (place and route) và không có tần số tối đa. Số ô logic (LUT, FF), nếu được nêu, lấy từ Yosys và chỉ là ước lượng cấu trúc, không thay cho kết quả của công cụ hãng.
+  \item \textbf{G2 chỉ chạy trong hồi quy.} Bản demo chạy lõi G1. Lõi G2 chạy trong co-sim với ISS, trong ModelSim và trong các chương trình kiểm hazard, không chạy trong bản demo.
+\end{itemize}
+Phần lớn mã nguồn do công cụ AI viết theo yêu cầu của nhóm. Mỗi thành viên đã đọc phần mã của mình, chạy lại các testbench liên quan và phải giải thích được nó.
 
-\section{Tổng thể SoC}
-\hinhtrong{Sơ đồ tổng thể SoC WatchChip (H1)}{TV3}{khối trên hình = module trong \texttt{soc\_top.v}}
-\TODO{TV3. Thông số (IMEM/DMEM, xung nhịp mô phỏng), giao diện vào/ra.}
+\subsection{Công cụ}
+Bảng~\ref{tab:cong-cu} liệt kê công cụ, phiên bản (ghi trong \texttt{evidence/20261001\_wp0\_long.log}) và việc nó làm trong đề tài.
 
-\section{Bộ điều khiển hiển thị}
-\TODO{TV4. Display RAM, ROM ký tự, quét 7 đoạn (khoảng tắt \texttt{G\_BLANK}, bản sửa 27/10), VGA đuổi tia. Nháp: \texttt{report/2.3-vga.md}. Khớp \texttt{docs/display-spec.md}.}
-\hinhtrong{Bộ điều khiển hiển thị và giản đồ thời gian quét có khoảng tắt (H7)}{TV4}{khớp \texttt{display-spec.md} §4}
+\begin{table}[htbp]
+\centering\small
+\begin{tabular}{@{}l l p{7.2cm}@{}}
+\toprule
+Công cụ & Phiên bản & Dùng để \\
+\midrule
+Icarus Verilog & 14.0 & Biên dịch và chạy testbench (\texttt{iverilog}, \texttt{vvp}) cho mọi khối và cho G1. \\
+ModelSim & \textit{chưa ghi} & Chạy lại G2 (\texttt{tools/run\_modelsim\_g2.py}) và so trace với Icarus. \\
+Yosys & 0.69+173 & Tổng hợp để đếm LUT và FF (ước lượng, không phải Vivado). \\
+MARS & 4.5 & Bộ mô phỏng MIPS độc lập, làm chuẩn so trace để không cùng sai với ISS tự viết. \\
+Python & \textit{chưa ghi} & \texttt{asm.py} dịch hợp ngữ, \texttt{iss.py} mô phỏng mức lệnh (ISS), \texttt{cmp\_trace.py} so trace, \texttt{cosim\_iss.py} và \texttt{cosim\_mars.py} chạy co-sim; \texttt{pytest} cho các script. \\
+\bottomrule
+\end{tabular}
+\caption{Công cụ dùng trong đề tài.}\label{tab:cong-cu}
+\end{table}
+\TODO{TV2. Điền phiên bản ModelSim và Python (hai ô còn trống trong Bảng~\ref{tab:cong-cu}); chạy \texttt{vsim -version} và \texttt{python --version} trên máy đã chạy hồi quy.}
 
-\section{Timebase, hiệu chỉnh CAL và các bộ định thời}
-\TODO{TV5. Timebase + \texttt{CAL}, RTC, stopwatch có capture, TIMER đếm ngược, alarm, nút. Phần thí nghiệm E1$'$/E2$'$ đặt ở mục~\ref{sec:thi-nghiem}.}
-\hinhtrong{Timebase và các bộ định thời, có đường capture (H5)}{TV5}{}
+\subsection{Cây thư mục}
+Từ thư mục gốc của project:
+\begin{itemize}
+  \item \texttt{src/}: 21 file Verilog của chip (CPU, ALU, bộ đếm, hiển thị, bus, UART);
+  \item \texttt{tb/}: testbench, kèm \texttt{tb/vectors/} là các file vector kiểm;
+  \item \texttt{fw/}: firmware hợp ngữ MIPS (\texttt{main.s}) và các chương trình kiểm trong \texttt{fw/tests/};
+  \item \texttt{tools/}: assembler, ISS, co-sim, script chạy hồi quy;
+  \item \texttt{docs/}: tài liệu hợp đồng (tập lệnh, bảng điều khiển, luật pipeline, bản đồ MMIO);
+  \item \texttt{evidence/}: log chạy thật, là nguồn của mọi con số trong báo cáo;
+  \item \texttt{work/}: đầu ra tạm của mô phỏng;
+  \item \texttt{report/}: báo cáo này.
+\end{itemize}
 
-\section{Bus, MMIO, bộ điều khiển ngắt, UART, bộ tạo âm}
-\TODO{TV4/TV3. Nháp UART + ngắt UART\_RX: \texttt{report/2.5-uart-sync-ngat.md}. Bảng địa chỉ khớp \texttt{docs/mmio-map.md}.}
-\hinhtrong{Bản đồ địa chỉ MMIO (H6)}{TV4}{khớp \texttt{mmio-map.md}}
+\subsection{Cách chạy testbench}
+Cần Git Bash hoặc bash. Từ thư mục gốc:
+\begin{Verbatim}[frame=single,fontsize=\footnotesize]
+bash tools/setup_env.sh        # cài công cụ, một lần
+source tools/env.sh            # mỗi lần mở terminal mới
+bash tools/run_unit.sh alu     # chạy tb/alu_tb.v
+bash tools/run_unit.sh         # chạy cả hồi quy
+\end{Verbatim}
+Mỗi testbench in dòng cuối \texttt{PASS <tên> <số lần kiểm>} hoặc \texttt{FAIL}. Ví dụ, \texttt{alu\_tb} cho \texttt{PASS alu\_tb 4200}. Hồi quy đầy đủ gần nhất (\texttt{evidence/20261027\_regress\_rbuf.log}) có 41 dòng PASS và kết thúc bằng \texttt{EXIT 0}.
 
-\section{CPU G1: đơn chu kỳ}
+Hai testbench \texttt{cpu\_g1\_tb} và \texttt{cpu\_pipe\_tb} cần có chương trình nạp vào IMEM (đối số \texttt{+imem}), nên chạy riêng bằng \texttt{run\_unit.sh} sẽ báo FAIL. Chúng chạy qua co-sim:
+\begin{Verbatim}[frame=single,fontsize=\footnotesize]
+python tools/cosim_iss.py          # G1
+python tools/cosim_iss.py --g2     # G2
+\end{Verbatim}
+
+\section{Thông số và cổng của CPU}\label{sec:thong-so}
+G1 (\texttt{src/cpu\_g1.v}, dòng 22--43) và G2 (\texttt{src/cpu\_pipe.v}, dòng 26--46) có \emph{cùng một bộ cổng}, nên SoC thay lõi này bằng lõi kia mà không đổi dây. Bảng~\ref{tab:cpu-cong} liệt kê tham số, cổng và bộ nhớ.
+
+\begin{table}[htbp]
+\centering\small
+\begin{tabular}{@{}l l l p{6cm}@{}}
+\toprule
+Tên & Hướng & Rộng & Ý nghĩa \\
+\midrule
+\multicolumn{4}{@{}l}{\emph{Tham số}} \\
+\texttt{IMEM\_FILE}, \texttt{DMEM\_FILE} & --- & chuỗi & File hex nạp vào IMEM, DMEM; rỗng thì không nạp. \\
+\texttt{G\_IMEM\_AW} & --- & số & IMEM có $2^{\texttt{G\_IMEM\_AW}}$ word; mặc định 10 (1024 word). \\
+\texttt{G\_BCD\_COMB} & --- & 0/1 & 0: \texttt{bcd} chạy tuần tự nhiều chu kỳ; 1: tổ hợp. \\
+\texttt{TRACE\_FILE} & --- & chuỗi & File ghi trace từng lệnh (chỉ mô phỏng). \\
+\midrule
+\multicolumn{4}{@{}l}{\emph{Cổng}} \\
+\texttt{clk} & vào & 1 & Xung hệ thống. \\
+\texttt{rst} & vào & 1 & Reset đồng bộ. \\
+\texttt{cpu\_ce} & vào & 1 & Cho phép CPU bước một nhịp (mục~\ref{sec:g1}). \\
+\texttt{bus\_addr} & ra & 8 & Địa chỉ thanh ghi ngoại vi, căn 4. \\
+\texttt{bus\_wdata} & ra & 32 & Dữ liệu \texttt{sw} gửi ngoại vi. \\
+\texttt{bus\_we}, \texttt{bus\_re} & ra & 1 & Ghi, đọc ngoại vi. \\
+\texttt{bus\_rdata} & vào & 32 & Dữ liệu ngoại vi trả cho \texttt{lw}. \\
+\texttt{irq} & vào & 1 & Yêu cầu ngắt, tính theo mức. \\
+\texttt{irq\_ip} & vào & 8 & Cờ ngắt đang chờ, đọc được bằng \texttt{mfc0 \$13}. \\
+\texttt{div\_dz} & ra & 1 & Cờ chia cho 0. \\
+\texttt{pc\_out} & ra & 32 & PC hiện tại, để testbench quan sát. \\
+\texttt{retire} & ra & 1 & Xung báo một lệnh vừa xong. \\
+\midrule
+\multicolumn{4}{@{}l}{\emph{Bộ nhớ trong lõi}} \\
+\texttt{imem} & --- & $2^{10} \times 32$ & Bộ nhớ lệnh, kiểu Harvard. \\
+\texttt{dmem} & --- & $1024 \times 32$ & Bộ nhớ dữ liệu 4 KB, địa chỉ \texttt{0x0000\_0000}--\texttt{0x0000\_0FFF}. \\
+\bottomrule
+\end{tabular}
+\caption{Tham số, cổng và bộ nhớ của CPU (giống nhau ở G1 và G2).}\label{tab:cpu-cong}
+\end{table}
+
+Địa chỉ \texttt{lw}/\texttt{sw} nằm trong vùng \texttt{0xFFFF\_FF00}--\texttt{0xFFFF\_FFFF} thì đi ra bus tới ngoại vi (MMIO). Chương trình truy cập vùng này bằng offset âm so với \texttt{\$zero}, ví dụ \texttt{lw \$t0, -252(\$zero)}. Địa chỉ ở nơi khác thì đọc ra 0 và ghi bị bỏ. \texttt{lw}/\texttt{sw} lệch 4 byte thì bỏ hai bit thấp, không có ngoại lệ căn lề.
+
+\section{CPU G1: đơn chu kỳ}\label{sec:g1}
 \subsection{Datapath}
-\hinhtrong{Datapath CPU G1 (H2)}{TV1}{mỗi tên tín hiệu có trong \texttt{cpu\_g1.v}}
-\subsection{Khối điều khiển và bảng chân lý}
-\TODO{TV3. Bảng chân lý cho \textbf{cả 28 lệnh}, khớp \texttt{docs/control-table.md}.}
-\subsection{CP0 và ngắt}
-\subsection{Vì sao chọn: G1 hai pha (BRAM sườn xuống) hay LUT-RAM}
+Hình~\ref{fig:h2} là đường dữ liệu của G1. Dữ liệu đi từ trái sang phải theo bảy bước.
+\begin{enumerate}
+  \item \texttt{pc} giữ địa chỉ lệnh; IMEM (\texttt{imem}) trả lệnh \texttt{instr}.
+  \item Khối \texttt{control u\_ctl} giải mã \texttt{instr} thành các tín hiệu điều khiển (mục~\ref{sec:control}); đường nét đứt trên hình.
+  \item Thanh ghi (\texttt{regfile u\_rf}) đọc hai giá trị \texttt{rs\_v}, \texttt{rt\_v}. Khối \texttt{imm\_x} mở rộng hằng 16 bit của lệnh.
+  \item ALU (\texttt{alu u\_alu}) nhận \texttt{rs\_v} và một trong hai nguồn: \texttt{rt\_v} hoặc \texttt{imm\_x} (chọn bằng \texttt{alu\_src}), rồi ra \texttt{alu\_y}.
+  \item Với \texttt{lw} và \texttt{sw}, \texttt{alu\_y} là địa chỉ (\texttt{maddr}). Bộ nhớ dữ liệu hoặc ngoại vi trả \texttt{load\_v}.
+  \item Khối \texttt{res} chọn kết quả theo \texttt{res\_sel}: ALU, \texttt{mul\_y}, \texttt{hi}, \texttt{lo}, \texttt{bcd\_y}, \texttt{cp0\_rd} hoặc \texttt{pc + 4}. Khối \texttt{wb} chọn giữa \texttt{load\_v} và \texttt{res} (\texttt{mem\_to\_reg}) rồi ghi về \texttt{regfile}.
+  \item Khối \texttt{next\_pc} tính địa chỉ lệnh kế theo thứ tự ưu tiên: reset, đứng chờ (\texttt{stall}), \texttt{eret}, \texttt{jr}, \texttt{j}/\texttt{jal}, rẽ nhánh (\texttt{take}), cuối cùng là \texttt{pc4}. Vào ngắt thì PC bị thay bằng \texttt{0x180}: trong code, \texttt{pc\_new} bằng \texttt{0x180} khi có ngắt và bằng \texttt{next\_pc} khi không (\texttt{src/cpu\_g1.v}, dòng 167).
+\end{enumerate}
+
+\begin{figure}[htbp]
+\centering
+\resizebox{\linewidth}{!}{\input{hinh/h2-datapath-g1}}
+\caption{Datapath CPU G1. Nền xanh: khối cập nhật ở pha A; nền cam: khối làm việc ở pha B; trắng: mạch tổ hợp; nét đứt: tín hiệu điều khiển từ \texttt{control}. Mọi nhãn là tên tín hiệu hoặc module trong \texttt{src/cpu\_g1.v}.}\label{fig:h2}
+\end{figure}
+
+Hai đoạn code dưới đây là phần của hình mà người đọc hay hỏi nhất. Đoạn đầu tạo \texttt{bus\_re}, \texttt{bus\_we} và \texttt{load\_v}; đoạn sau là thứ tự ưu tiên của \texttt{next\_pc}.
+\maunguon{../../src/cpu_g1.v}{122}{130}{Địa chỉ bộ nhớ, tín hiệu bus và dữ liệu \texttt{lw} (\texttt{src/cpu\_g1.v}).}
+\maunguon{../../src/cpu_g1.v}{152}{162}{Thứ tự ưu tiên của \texttt{next\_pc} (\texttt{src/cpu\_g1.v}).}
+
+\subsection{Một chu kỳ CPU gồm hai pha}\label{sec:2pha}
+Mỗi chu kỳ CPU của G1 gồm hai cạnh \texttt{cpu\_ce} liên tiếp, gọi là \textbf{pha A} (đầu chu kỳ) và \textbf{pha B} (giữa chu kỳ). Hai pha dùng cùng một xung \texttt{clk}; không có xung thứ hai.
+
+\begin{table}[htbp]
+\centering\small
+\begin{tabular}{@{}l p{11cm}@{}}
+\toprule
+Lúc & Việc xảy ra \\
+\midrule
+Pha A & \texttt{pc}, \texttt{regfile}, \texttt{HI}/\texttt{LO}, CP0 cập nhật. IMEM chốt \texttt{imem[pc\_new]}; thanh ghi đầu ra của IMEM từ đây là lệnh của chu kỳ mới. \\
+Giữa A và B & Giải mã, đọc \texttt{regfile}, ALU tính địa chỉ hoặc kết quả. \\
+Pha B & DMEM và MMIO chốt địa chỉ: \texttt{sw} ghi, \texttt{lw} đọc vào thanh ghi đầu ra. Tác dụng phụ của ngoại vi xảy ra ở đây (\texttt{bus\_re}, \texttt{bus\_we}). \\
+Giữa B và A & Dữ liệu \texttt{lw} đi qua \texttt{wb} về cổng ghi của \texttt{regfile}; \texttt{next\_pc} được tính. \\
+\bottomrule
+\end{tabular}
+\caption{Việc của từng pha trong một chu kỳ CPU của G1.}\label{tab:2pha}
+\end{table}
+
+Để nhớ: \emph{B (bộ nhớ) trước, A (cập nhật) sau}. Sau reset, \texttt{phb = 1} nên cạnh \texttt{cpu\_ce} đầu tiên là pha B, và IMEM đã giữ sẵn lệnh ở địa chỉ 0 (\texttt{imem[0]}). Khi lệnh nhiều chu kỳ (\texttt{div}, \texttt{bcd}) đang chạy, \texttt{next\_pc = pc} và IMEM chốt lại đúng lệnh cũ.
+
+\subsection{Đường đi của \texttt{lw \$t0, -252(\$zero)}}
+Offset $-252$ mở rộng dấu thành \texttt{0xFFFFFF04}, nằm trong vùng ngoại vi, tại thanh ghi \texttt{MS\_OF\_DAY} (số ms trong ngày). Đọc thanh ghi này đồng thời chụp lại ngày vào \texttt{DAY\_SHADOW}; firmware đọc \texttt{MS\_OF\_DAY} trước rồi mới đọc \texttt{DAY\_SHADOW}, để cặp (ms, ngày) khớp nhau kể cả khi nửa đêm qua giữa hai lần đọc.
+
+\begin{table}[htbp]
+\centering\small
+\begin{tabular}{@{}c l p{9cm}@{}}
+\toprule
+Bước & Lúc & Việc \\
+\midrule
+1 & Pha A & Thanh ghi đầu ra IMEM đã chứa \texttt{lw}, vì IMEM chốt \texttt{imem[pc\_new]}. \\
+2 & Giữa A và B & \texttt{control} bật \texttt{mem\_read}, \texttt{mem\_to\_reg}, \texttt{reg\_write}; \texttt{regfile} đọc \texttt{\$zero} = 0; ALU cộng $0 + \texttt{0xFFFFFF04}$ ra \texttt{maddr}. \\
+3 & Pha B & \texttt{bus\_re = ph\_b \&\& mem\_read \&\& in\_mmio} (dòng 128) bằng 1; ngoại vi chốt \texttt{bus\_addr} = \texttt{0x04}, trả \texttt{MS\_OF\_DAY} và chụp ngày. \\
+4 & Giữa B và A & \texttt{load\_v} lấy \texttt{bus\_rdata}; \texttt{wb} chọn \texttt{load\_v} (dòng 130, \texttt{mem\_to\_reg} = 1). \\
+5 & Pha A kế tiếp & \texttt{regfile} ghi \texttt{wb} vào \texttt{\$t0}. \\
+\bottomrule
+\end{tabular}
+\caption{Đường đi của một lệnh \texttt{lw} đọc ngoại vi trong G1.}\label{tab:lw}
+\end{table}
+
+Ở G2 (\texttt{src/cpu\_pipe.v}), cùng lệnh đó đi qua năm tầng: IF lấy lệnh, ID giải mã và đọc \texttt{\$zero}, EX tính địa chỉ, MEM đọc bus đúng một bước, WB ghi \texttt{\$t0}. Lệnh ngay sau mà dùng \texttt{\$t0} phải đứng một chu kỳ (load-use).
+
+\subsection{Vì sao chọn: G1 hai pha}\label{sec:vi-sao-2pha}
+\textbf{Vấn đề.} Bộ nhớ trong FPGA (BRAM) đọc \emph{đồng bộ}: địa chỉ phải được chốt ở một cạnh xung, dữ liệu mới có ở cạnh sau. Một lệnh \texttt{lw} cần hai lần truy cập nối tiếp: lấy lệnh từ IMEM, rồi lấy dữ liệu từ DMEM theo địa chỉ ALU vừa tính.
+
+\begin{table}[htbp]
+\centering\small
+\begin{tabular}{@{}p{4.3cm} p{4.6cm} p{4.6cm}@{}}
+\toprule
+Phương án & Ưu & Nhược \\
+\midrule
+(a) BRAM chốt ở cạnh xuống, một pha (thiết kế ngày 24/09) & Chỉ cần một chu kỳ. & Nếu IMEM chốt \texttt{pc} ở giữa chu kỳ thì không còn chỗ cho DMEM: địa chỉ của \texttt{lw} chưa tính xong. Mỗi nửa chu kỳ chỉ còn 10 ns. \\
+(b) Bộ nhớ đọc tổ hợp (LUT-RAM), một pha & Không cần pha. & Suy luận (chưa kiểm vì không có Vivado): chỉ hợp với bộ nhớ nhỏ, vì bộ nhớ lớn trên FPGA Xilinx là BRAM đọc đồng bộ. \\
+(c) Hai cạnh \texttt{cpu\_ce} cùng một \texttt{clk} (chọn) & Mỗi nửa có trọn 20 ns; không có xung thứ hai; IMEM đọc đồng bộ nên viết được dưới dạng BRAM. & Mỗi chu kỳ CPU tốn hai xung hệ thống, nên G1 chậm hơn đơn chu kỳ lý tưởng. \\
+\bottomrule
+\end{tabular}
+\caption{Ba cách tổ chức bộ nhớ cho G1.}\label{tab:vi-sao-2pha}
+\end{table}
+
+\textbf{Chọn (c)} vì nó giữ đúng ý đồ ``BRAM ở sườn xuống'' của thiết kế ngày 24/09 nhưng dùng hai cạnh lên, nên không bị ràng buộc nửa chu kỳ và không thêm xung. Điểm sửa so với bản 24/09: IMEM phải được địa chỉ bằng \texttt{next\_pc} ở pha A, để thanh ghi đầu ra của nó là lệnh của chu kỳ sau. Phần ``IMEM suy ra BRAM'' chưa kiểm vì không có công cụ hãng.
+
+\textbf{Cách kiểm.} G1 chạy chương trình MIPS rồi so từng lệnh với ISS và với MARS. Hồi quy gần nhất có \texttt{PASS cosim\_mars 19} và \texttt{PASS cosim\_iss 25}, trong đó có chương trình \texttt{lw} đọc MMIO (\texttt{evidence/20261027\_regress\_rbuf.log}).
+
+\section{Khối điều khiển và bảng chân lý}\label{sec:control}
+Khối \texttt{control} (\texttt{src/control.v}) nhận một lệnh 32 bit và trả ra 16 tín hiệu điều khiển, hoàn toàn bằng mạch tổ hợp. G1 và G2 dùng chung khối này. Ý nghĩa các tín hiệu:
+\begin{itemize}
+  \item \texttt{reg\_write}: lệnh có ghi thanh ghi đích; \texttt{dst}: đích là \texttt{rd}, \texttt{rt} hay \texttt{\$31};
+  \item \texttt{alu\_src}: toán hạng B của ALU là \texttt{rt\_v} (0) hay \texttt{imm\_x} (1); \texttt{ext}: hằng 16 bit mở rộng dấu (SE), mở rộng 0 (ZE) hay đặt lên 16 bit cao (LUI);
+  \item \texttt{alu\_ctl}: phép của ALU (ADD, SUB, AND, OR, XOR, SLT, SLL, SRA); \texttt{res\_sel}: kết quả đến từ ALU, MUL, HI, LO, BCD, CP0 hay PC4;
+  \item \texttt{mem\_read}, \texttt{mem\_write}, \texttt{mem\_to\_reg}: đọc, ghi bộ nhớ dữ liệu, và kết quả ghi về thanh ghi lấy từ bộ nhớ;
+  \item \texttt{branch}: không, \texttt{beq} hoặc \texttt{bne}; \texttt{jump}: \texttt{j}/\texttt{jal}; \texttt{jump\_reg}: \texttt{jr};
+  \item \texttt{multi}: lệnh nhiều chu kỳ, không, \texttt{div} hoặc \texttt{bcd} (bản tuần tự); \texttt{cp0\_op}: không, \texttt{mtc0} hoặc \texttt{eret};
+  \item \texttt{uses\_rs}, \texttt{uses\_rt}: lệnh có \emph{thật sự} đọc \texttt{rs}, \texttt{rt}. Bộ phát hiện load-use của G2 dùng hai tín hiệu này để khỏi đứng oan.
+\end{itemize}
+Bảng~\ref{tab:control} cho giá trị của 16 tín hiệu ở cả 28 lệnh. Ô trống bằng 0; \texttt{--} là không dùng (khi đó \texttt{dst} bị ép về 0). Opcode hoặc funct không có trong bảng cho mọi tín hiệu bằng 0, tức lệnh lạ chạy như \texttt{nop}; cổng phụ \texttt{valid} chỉ để mô phỏng báo ``lệnh lạ'' và không thuộc 16 tín hiệu.
+
+{\scriptsize\setlength{\tabcolsep}{2.2pt}
+\begin{longtable}{@{}r l *{16}{c}@{}}
+\caption{Bảng chân lý của \texttt{control} cho 28 lệnh.}\label{tab:control}\\
+\toprule
+\# & Lệnh & \rotatebox{90}{\texttt{reg\_write}} & \rotatebox{90}{\texttt{dst}} & \rotatebox{90}{\texttt{alu\_src}} & \rotatebox{90}{\texttt{ext}} & \rotatebox{90}{\texttt{alu\_ctl}} & \rotatebox{90}{\texttt{res\_sel}} & \rotatebox{90}{\texttt{mem\_read}} & \rotatebox{90}{\texttt{mem\_write}} & \rotatebox{90}{\texttt{mem\_to\_reg}} & \rotatebox{90}{\texttt{branch}} & \rotatebox{90}{\texttt{jump}} & \rotatebox{90}{\texttt{jump\_reg}} & \rotatebox{90}{\texttt{multi}} & \rotatebox{90}{\texttt{cp0\_op}} & \rotatebox{90}{\texttt{uses\_rs}} & \rotatebox{90}{\texttt{uses\_rt}} \\
+\midrule
+\endfirsthead
+\toprule
+\# & Lệnh & \rotatebox{90}{\texttt{reg\_write}} & \rotatebox{90}{\texttt{dst}} & \rotatebox{90}{\texttt{alu\_src}} & \rotatebox{90}{\texttt{ext}} & \rotatebox{90}{\texttt{alu\_ctl}} & \rotatebox{90}{\texttt{res\_sel}} & \rotatebox{90}{\texttt{mem\_read}} & \rotatebox{90}{\texttt{mem\_write}} & \rotatebox{90}{\texttt{mem\_to\_reg}} & \rotatebox{90}{\texttt{branch}} & \rotatebox{90}{\texttt{jump}} & \rotatebox{90}{\texttt{jump\_reg}} & \rotatebox{90}{\texttt{multi}} & \rotatebox{90}{\texttt{cp0\_op}} & \rotatebox{90}{\texttt{uses\_rs}} & \rotatebox{90}{\texttt{uses\_rt}} \\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+1 & \texttt{addu} & 1 & rd & 0 & -- & ADD & ALU &  &  &  &  &  &  &  &  & 1 & 1 \\
+2 & \texttt{subu} & 1 & rd & 0 & -- & SUB & ALU &  &  &  &  &  &  &  &  & 1 & 1 \\
+3 & \texttt{and} & 1 & rd & 0 & -- & AND & ALU &  &  &  &  &  &  &  &  & 1 & 1 \\
+4 & \texttt{or} & 1 & rd & 0 & -- & OR & ALU &  &  &  &  &  &  &  &  & 1 & 1 \\
+5 & \texttt{xor} & 1 & rd & 0 & -- & XOR & ALU &  &  &  &  &  &  &  &  & 1 & 1 \\
+6 & \texttt{slt} & 1 & rd & 0 & -- & SLT & ALU &  &  &  &  &  &  &  &  & 1 & 1 \\
+7 & \texttt{sll} & 1 & rd & 0 & -- & SLL & ALU &  &  &  &  &  &  &  &  & 0 & 1 \\
+8 & \texttt{sra} & 1 & rd & 0 & -- & SRA & ALU &  &  &  &  &  &  &  &  & 0 & 1 \\
+9 & \texttt{jr} & 0 & -- & -- & -- & -- & -- &  &  &  &  &  & 1 &  &  & 1 & 0 \\
+10 & \texttt{div} & 0 & -- & -- & -- & -- & -- &  &  &  &  &  &  & div &  & 1 & 1 \\
+11 & \texttt{mfhi} & 1 & rd & -- & -- & -- & HI &  &  &  &  &  &  &  &  & 0 & 0 \\
+12 & \texttt{mflo} & 1 & rd & -- & -- & -- & LO &  &  &  &  &  &  &  &  & 0 & 0 \\
+13 & \texttt{addiu} & 1 & rt & 1 & SE & ADD & ALU &  &  &  &  &  &  &  &  & 1 & 0 \\
+14 & \texttt{slti} & 1 & rt & 1 & SE & SLT & ALU &  &  &  &  &  &  &  &  & 1 & 0 \\
+15 & \texttt{andi} & 1 & rt & 1 & ZE & AND & ALU &  &  &  &  &  &  &  &  & 1 & 0 \\
+16 & \texttt{ori} & 1 & rt & 1 & ZE & OR & ALU &  &  &  &  &  &  &  &  & 1 & 0 \\
+17 & \texttt{lui} & 1 & rt & 1 & LUI & OR & ALU &  &  &  &  &  &  &  &  & 0 & 0 \\
+18 & \texttt{lw} & 1 & rt & 1 & SE & ADD & ALU & 1 &  & 1 &  &  &  &  &  & 1 & 0 \\
+19 & \texttt{sw} & 0 & -- & 1 & SE & ADD & -- &  & 1 &  &  &  &  &  &  & 1 & 1 \\
+20 & \texttt{beq} & 0 & -- & 0 & SE &  & -- &  &  &  & beq &  &  &  &  & 1 & 1 \\
+21 & \texttt{bne} & 0 & -- & 0 & SE &  & -- &  &  &  & bne &  &  &  &  & 1 & 1 \\
+22 & \texttt{j} & 0 & -- & -- & -- & -- & -- &  &  &  &  & 1 &  &  &  & 0 & 0 \\
+23 & \texttt{jal} & 1 & 31 & -- & -- & -- & PC4 &  &  &  &  & 1 &  &  &  & 0 & 0 \\
+24 & \texttt{mul} & 1 & rd & 0 & -- & -- & MUL &  &  &  &  &  &  &  &  & 1 & 1 \\
+25 & \texttt{bcd} & 1 & rd & -- & -- & -- & BCD &  &  &  &  &  &  & bcd &  & 1 & 0 \\
+26 & \texttt{mfc0} & 1 & rt & -- & -- & -- & CP0 &  &  &  &  &  &  &  &  & 0 & 0 \\
+27 & \texttt{mtc0} & 0 & -- & -- & -- & -- & -- &  &  &  &  &  &  &  & mtc0 & 0 & 1 \\
+28 & \texttt{eret} & 0 & -- & -- & -- & -- & -- &  &  &  &  &  &  &  & eret & 0 & 0 \\
+\end{longtable}
+}
+
+\paragraph{Cách đọc một dòng.} Lấy \texttt{lw} (dòng 18): \texttt{reg\_write} = 1 và \texttt{dst} = \texttt{rt} (ghi vào \texttt{rt}); \texttt{alu\_src} = 1, \texttt{ext} = SE, \texttt{alu\_ctl} = ADD (cộng \texttt{rs} với hằng đã mở rộng dấu ra địa chỉ); \texttt{mem\_read} = 1 và \texttt{mem\_to\_reg} = 1 (đọc bộ nhớ và ghi dữ liệu đó về \texttt{rt}); \texttt{uses\_rs} = 1, \texttt{uses\_rt} = 0 (\texttt{rt} là nơi ghi, không phải nơi đọc). Lệnh \texttt{sw} (dòng 19) khác ở chỗ \texttt{reg\_write} = 0, \texttt{mem\_write} = 1 và \texttt{uses\_rt} = 1, vì \texttt{rt} là giá trị cần ghi ra.
+
+Trong code, \texttt{lw} và \texttt{sw} là hai nhánh của một lệnh \texttt{case}:
+\maunguon{../../src/control.v}{87}{91}{Giải mã \texttt{lw} và \texttt{sw} (\texttt{src/control.v}).}
+
+\subsection{Vì sao chọn: giải mã một cấp}\label{sec:vi-sao-control}
+\textbf{Vấn đề.} Từ opcode và funct, \texttt{control} phải sinh ra phép cho ALU. Sách giáo khoa giải mã hai cấp; nhóm cân nhắc hai cách.
+
+\begin{table}[htbp]
+\centering\small
+\begin{tabular}{@{}p{4.3cm} p{4.6cm} p{4.6cm}@{}}
+\toprule
+Phương án & Ưu & Nhược \\
+\midrule
+(a) Hai cấp: bộ điều khiển chính sinh \texttt{ALUOp} 2 bit, khối ALU control sinh \texttt{alu\_ctl} từ \texttt{ALUOp} và funct (như P\&H) & Bảng chính nhỏ; đúng cách sách trình bày. & Hai khối, hai bảng phải khớp nhau. Nhóm có 4 nhóm opcode (R, I/J, SPECIAL2, COP0) nên khối thứ hai phải xử lý nhiều trường hợp. \\
+(b) Một cấp: sinh thẳng \texttt{alu\_ctl} từ opcode và funct (chọn) & Một bảng phẳng 28 dòng, kiểm một lần. & Khối \texttt{control} lớn hơn một chút. \\
+\bottomrule
+\end{tabular}
+\caption{Hai cách giải mã cho \texttt{alu\_ctl}.}\label{tab:vi-sao-control}
+\end{table}
+
+\textbf{Chọn (b)} vì với 28 lệnh, một bảng phẳng dễ đối chiếu với tài liệu hơn hai bảng nối tiếp. Cái giá là khối lớn hơn một chút; nhóm chưa đo mức chênh này vì không có công cụ tổng hợp của hãng.
+
+\textbf{Cách kiểm.} Testbench \texttt{control\_tb} so đầu ra với \texttt{tb/vectors/control.txt} cho cả 28 lệnh, rồi thử thêm lệnh ngẫu nhiên để kiểm lệnh lạ cho ra toàn 0; hồi quy ghi \texttt{PASS control\_tb 82646}. Từng dòng của Bảng~\ref{tab:control} cũng khớp với file vector đó, nên sửa \texttt{control.v} mà không sửa file vector thì \texttt{control\_tb} báo FAIL.
 
 \section{CPU G2: pipeline 5 tầng}
-\hinhtrong{Datapath CPU G2 đầy đủ (H3)}{TV3}{}
-\subsection{Thanh ghi đường ống}
-\TODO{TV3. Bảng trường + độ rộng từng thanh ghi tầng, khớp \texttt{cpu\_pipe.v}.}
+\hinhtrong{Datapath CPU G2 đầy đủ (H3)}{TV3}{mỗi tên tín hiệu có trong \texttt{cpu\_pipe.v}}
+\TODO{TV3 + TV4. Từng tầng IF, ID, EX, MEM, WB và bốn thanh ghi tầng (trường, độ rộng), Bảng 2.4. Nguồn: \texttt{docs/pipeline-policy.md} mục 0--2, \texttt{src/cpu\_pipe.v}.}
 
 \section{Xử lý xung đột}
-\TODO{TV2. Mỗi loại đi đủ 5 bước: định nghĩa $\rightarrow$ biểu thức điều kiện $\rightarrow$ khối phần cứng $\rightarrow$ đoạn code $\rightarrow$ \textbf{bảng diễn biến theo chu kỳ}. Bảng chu kỳ khớp \texttt{docs/pipeline-policy.md} §7.}
-\hinhtrong{Khối forwarding và hazard unit (H4)}{TV2}{}
-\subsection{RAW ở EX và ở MEM: forwarding}
-\subsection{Load-use: stall}
-\subsection{Rẽ nhánh: quyết định ở EX, flush}
-\subsection{\texttt{busy} freeze khi \texttt{div}/\texttt{bcd}}
-\subsection{\texttt{mtc0} $\rightarrow$ \texttt{mfc0}}
-\subsection{\texttt{eret} và vào/ra ngắt}
-\subsection{Vì sao chọn}
-\TODO{So sánh $\geq 2$ phương án rồi chốt: nhánh ở EX hay ID (bảng T4), bộ đếm nhị phân hay BCD, \texttt{bcd} tổ hợp hay tuần tự, polling hay ngắt, VGA đuổi tia hay framebuffer.}
+\hinhtrong{Khối forwarding và hazard unit (H4)}{TV2}{mỗi tên tín hiệu có trong \texttt{hazard.v}}
+\TODO{TV2 (TV1 phần \texttt{busy}, TV4 phần nhánh). Mỗi loại đi đủ 5 bước: định nghĩa, biểu thức điều kiện, khối phần cứng, đoạn code, bảng diễn biến theo chu kỳ. Gồm RAW ở EX/MEM, load-use, nhánh quyết định ở EX, \texttt{busy} khi \texttt{div}/\texttt{bcd}, \texttt{mtc0} sang \texttt{mfc0}, \texttt{eret}. Bảng chu kỳ khớp \texttt{docs/pipeline-policy.md} mục 7. Mục ``vì sao chọn'': nhánh ở EX hay ở ID, có $\geq 2$ phương án.}
 
 \section{ALU, nhân, chia và lệnh \texttt{bcd}}
-\TODO{TV1. ALU, \texttt{muldiv}, \texttt{bcd\_unit} hai bản.}
+\TODO{TV1 + TV4. ALU, \texttt{muldiv} (chia khôi phục 33 chu kỳ: một chu kỳ start và 32 bước), \texttt{bcd\_unit} hai bản, Bảng 2.5. Nguồn: \texttt{docs/isa-spec.md} mục 3--4, \texttt{src/alu.v}, \texttt{src/muldiv.v}, \texttt{src/bcd\_unit.v}.}
+
+\section{CP0 và ngắt}
+\hinhtrong{Sơ đồ vào và ra ngắt (H5)}{TV5}{khớp \texttt{docs/pipeline-policy.md} mục 10}
+\TODO{TV5. CP0, ngắt ở G1 và ngắt chính xác ở G2: lệnh ở ID và ID/EX bị hủy, EPC. Ghi rõ hạn chế: kiểm thử ngắt mới có mẫu nhỏ. Nguồn: \texttt{docs/isa-spec.md} mục 5, \texttt{docs/pipeline-policy.md} mục 10.}
+
+\section{Đoạn code chính}
+\TODO{Mỗi thành viên trích một đoạn $\le 20$ dòng có chú thích của lát mình, đúng file hiện tại (\texttt{\textbackslash maunguon} với dòng đầu và dòng cuối).}
+
+% ---------------------------------------------------------------------------
+% Các mục dưới đây thuộc đợt R3 (chương 3 trong BRIEF-25-11): giữ khung, chưa viết.
+% ---------------------------------------------------------------------------
+\section{Tổng thể SoC}
+\hinhtrong{Sơ đồ tổng thể SoC WatchChip (H1)}{TV3}{khối trên hình = module trong \texttt{soc\_top.v}}
+\TODO{TV3. Thông số (IMEM/DMEM, xung nhịp mô phỏng), giao diện vào/ra, bản đồ MMIO khớp \texttt{docs/mmio-map.md}.}
+
+\section{Bộ điều khiển hiển thị}
+\TODO{TV4. Display RAM, ROM ký tự, quét 7 đoạn (khoảng tắt \texttt{G\_BLANK}), VGA đuổi tia. Khớp \texttt{docs/display-spec.md}.}
+
+\section{Timebase, hiệu chỉnh CAL và các bộ định thời}
+\TODO{TV5. Timebase và \texttt{CAL}, RTC, bấm giờ có capture, hẹn giờ, báo thức, nút.}
 
 \section{Firmware}
-\TODO{TV2/TV5. 5 chế độ, \texttt{fmt}, đồng bộ giờ qua UART + \texttt{CAL} (bộ đệm đôi, 27/10). Một phần đã có trong \texttt{report/2.5-uart-sync-ngat.md}.}
-
-\section{Hiện thực các module chính}
-\TODO{Mỗi chủ gói trích 1 đoạn code ngắn có chú thích, đúng file hiện tại (\texttt{\textbackslash lstinputlisting} với \texttt{firstline/lastline}).}
+\TODO{TV1. Năm chế độ, vòng lặp chính, đồng bộ giờ qua UART và \texttt{CAL}.}

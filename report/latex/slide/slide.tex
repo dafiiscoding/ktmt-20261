@@ -1,0 +1,721 @@
+% Slide bảo vệ BTL KTMT MI4344 — WatchChip. 26 slide chính + 8 slide code chèn + 5 slide dự phòng (brief mục 3).
+% Biên dịch:  cd report/latex/slide && latexmk -xelatex -outdir=build slide.tex
+% Bản có ghi chú lời nói (để tập):  latexmk -xelatex -outdir=build-ghichu -usepretex="\def\ghichu{1}" slide.tex
+% Mỗi frame có \note{lời nói}; ghi chú chỉ gồm chữ thường, không có ký tự đặc biệt của TeX.
+\PassOptionsToPackage{table}{xcolor}
+\documentclass[aspectratio=169,11pt]{beamer}
+
+\usepackage{fontspec}
+\IfFontExistsTF{TeX Gyre Heros}{\setmainfont{TeX Gyre Heros}\setsansfont{TeX Gyre Heros}}%
+  {\setmainfont{Arial}\setsansfont{Arial}}
+% Chữ đơn cách phải đủ dấu tiếng Việt (code trích từ src/ có chú thích tiếng Việt): Latin Modern Mono không có
+\IfFontExistsTF{DejaVu Sans Mono}{\setmonofont{DejaVu Sans Mono}[Scale=MatchLowercase]}%
+  {\IfFontExistsTF{Consolas}{\setmonofont{Consolas}[Scale=MatchLowercase]}{\setmonofont{Courier New}[Scale=MatchLowercase]}}
+\usepackage{polyglossia}
+\setdefaultlanguage{vietnamese}
+\usepackage{booktabs,array,fvextra,tikz}
+\usetikzlibrary{arrows.meta,positioning,shapes.geometric,calc,fit}
+
+\definecolor{navy}{RGB}{20,50,110}
+\definecolor{acc}{RGB}{180,40,40}
+\setbeamercolor{frametitle}{fg=navy,bg=white}
+\setbeamercolor{normal text}{fg=black}
+\setbeamerfont{frametitle}{size=\large,series=\bfseries}
+\setbeamertemplate{navigation symbols}{}
+\setbeamertemplate{itemize items}[circle]
+\setbeamercolor{itemize item}{fg=navy}
+\setbeamersize{text margin left=0.8cm,text margin right=0.8cm}
+\setbeamertemplate{frametitle}{\vspace{3mm}\insertframetitle\par\vspace{-1mm}{\color{navy}\hrule height 0.8pt}}
+\newcommand{\whotag}{}
+\newcommand{\who}[1]{\gdef\whotag{#1}}
+\setbeamertemplate{footline}{\hfill{\scriptsize\color{gray}\whotag\ \ \insertframenumber}\hspace{5mm}\vspace{2.5mm}}
+\ifdefined\ghichu\setbeameroption{show notes}\fi
+
+\tikzset{blkb/.style={draw=navy,rounded corners=3pt,minimum height=1.7cm,minimum width=4.6cm,align=center,fill=blue!10},
+  blkg/.style={blkb,fill=green!12}, blko/.style={blkb,fill=orange!15}}
+\newcommand{\cho}[1]{\colorbox{yellow!50}{\textit{[#1]}}}
+\newcommand{\T}[1]{\texttt{#1}}
+% ---- code trích từ src/: \codeseg{file}{dòng đầu}{dòng cuối}{dòng tô}  (số dòng = số dòng thật trong file)
+\newcommand{\codeseg}[4]{\VerbatimInput[firstline=#2,lastline=#3,firstnumber=#2,numbers=left,numbersep=4pt,%
+  fontsize=\scriptsize,breaklines=true,breaksymbolleft={},highlightlines={#4},highlightcolor=yellow!60,%
+  frame=lines,framesep=2pt]{#1}}
+\newcommand{\codegap}{{\scriptsize\color{gray}\hspace{1.5em}\T{...}}\par}
+\newcommand{\ann}[2]{\par\smallskip\noindent{\small{\color{acc}\bfseries #1}\ #2}}
+% ---- ô tô màu trong bảng chu kỳ
+\newcommand{\fw}[1]{\cellcolor{orange!35}#1}
+\newcommand{\bub}[1]{\cellcolor{gray!30}#1}
+\newcommand{\stl}[1]{\cellcolor{yellow!50}#1}
+\newcommand{\hit}[1]{\cellcolor{red!20}#1}
+\newcommand{\ok}[1]{\cellcolor{green!20}#1}
+\renewcommand{\arraystretch}{1.18}
+\newcommand{\SRC}{../../../src/}
+
+% ---- sơ đồ 5 chặng + người giữ chặng (slide 4 và 26)
+\newcommand{\sodochang}{\begin{tikzpicture}[font=\small,>=Stealth,
+  b/.style={draw=navy,rounded corners=3pt,fill=blue!6,minimum width=2.5cm,minimum height=2.3cm,align=center,inner sep=3pt}]
+  \node[b] (a) at (0,0) {\textbf{IF}\\lấy lệnh\\[-1pt]{\footnotesize \T{pc}, nhánh,}\\[-3pt]{\footnotesize 2 pha G1, \T{bcd}}\\[2pt]\textcolor{acc}{\textbf{TV4}}};
+  \node[b] (b) at (2.9,0) {\textbf{ID}\\giải mã\\[-1pt]{\footnotesize \T{control},}\\[-3pt]{\footnotesize \T{regfile}}\\[2pt]\textcolor{acc}{\textbf{TV3}}};
+  \node[b] (c) at (5.8,0) {\textbf{EX}\\tính toán\\[-1pt]{\footnotesize ALU, nhân,}\\[-3pt]{\footnotesize chia}\\[2pt]\textcolor{acc}{\textbf{TV1}}};
+  \node[b] (d) at (8.7,0) {\textbf{MEM · WB}\\bộ nhớ, ghi về\\[-1pt]{\footnotesize hazard,}\\[-3pt]{\footnotesize forwarding}\\[2pt]\textcolor{acc}{\textbf{TV2}}};
+  \node[b,fill=orange!15] (e) at (11.6,0) {\textbf{Ngắt}\\CP0\\[-1pt]{\footnotesize \T{EPC}, \T{0x180},}\\[-3pt]{\footnotesize \T{cpu\_ce}}\\[2pt]\textcolor{acc}{\textbf{TV5}}};
+  \draw[->,thick] (a)--(b); \draw[->,thick] (b)--(c); \draw[->,thick] (c)--(d);
+\end{tikzpicture}}
+
+\begin{document}
+
+% ================================================================== 1
+\who{Long}
+\begin{frame}
+\vspace{6mm}
+{\color{navy}\bfseries\LARGE CPU MIPS32 pipeline 5 tầng\\chạy đồng hồ điện tử\par}
+\vspace{4mm}
+{\large WatchChip: hai lõi G1 (một lệnh một chu kỳ) và G2 (đường ống), mô phỏng bằng Verilog\par}
+\vspace{6mm}
+Kiến trúc máy tính · MI4344 · Bài tập lớn · bảo vệ 25/11/2026\par
+\vspace{2mm}
+Nhóm \cho{số nhóm}: \cho{5 thành viên, MSSV} \quad GV: \cho{tên giảng viên}
+\note{Em xin chào thầy và các bạn. Nhóm em làm một con chip nhỏ chạy đồng hồ điện tử, với lõi là bộ xử lý MIPS ba mươi hai bit viết bằng Verilog. Có hai bản lõi: G1 chạy mỗi lệnh trong một chu kỳ, còn G2 là đường ống năm tầng. Em nói trước một điều cho rõ: toàn bộ chạy trong mô phỏng, nhóm chưa nạp lên board. Hôm nay nhóm trình bày trong ba mươi phút, năm bạn lần lượt nói phần của mình, sau đó thầy hỏi thêm về code.}
+\end{frame}
+
+% ================================================================== 2
+\who{Long}
+\begin{frame}
+\frametitle{Nhóm làm gì trong một hình: đồng hồ là bài toán, CPU là lời giải}
+\centering
+\begin{tikzpicture}[font=\small,>=Stealth]
+  \node[blkb] (cpu) at (0,0) {\textbf{CPU, hai lõi}\\G1 · G2, cùng 28 lệnh\\{\footnotesize \T{cpu\_g1}, \T{cpu\_pipe}}};
+  \node[blkg] (soc) at (6.6,0) {\textbf{SoC đồng hồ}\\timebase · RTC · bấm giờ · hẹn giờ\\hiển thị 8 chữ số · UART · ngắt};
+  \node[blko] (tst) at (3.3,-2.6) {\textbf{Bộ kiểm thử}\\testbench · ISS · MARS};
+  \draw[<->,thick] (cpu)--node[above,font=\footnotesize]{bus MMIO}(soc);
+  \draw[->,thick] (tst)--(cpu); \draw[->,thick] (tst)--(soc);
+\end{tikzpicture}
+\par\medskip
+Đồng hồ là bài toán. CPU là lời giải. Hai phần nói đan nhau.
+\note{Đây là toàn cảnh dự án trong một hình. Đề tài là một con chip đồng hồ điện tử chính xác tới mili giây, mô phỏng bằng Verilog. Khối bên phải là SoC đồng hồ: bộ đếm thời gian, đồng hồ thời gian thực, bấm giờ, hẹn giờ, hiển thị tám chữ số và cổng UART. Khối bên trái là CPU tự thiết kế, có hai lõi dùng chung một tập lệnh: G1 chạy mỗi lệnh trong một chu kỳ, G2 là đường ống năm tầng. Khối bên dưới là bộ kiểm thử, nhờ nó nhóm mới tin chip chạy đúng. Đồng hồ là bài toán, CPU là lời giải, nên nhóm sẽ nói đan xen hai phần.}
+\end{frame}
+
+\who{Long}
+\begin{frame}
+\frametitle{Đồng hồ cần sáu việc, mỗi việc đòi CPU một khả năng}
+\centering
+{\normalsize\begin{tabular}{@{}lll@{}}
+\toprule đồng hồ cần & CPU phải có & lát \\ \midrule
+đếm đúng 1 ms & xung phép \T{cpu\_ce} & TV5 \\
+bấm nút, báo thức kịp lúc & ngắt \T{EPC}, \T{0x180} & TV5 \\
+đổi ms ra giờ phút giây & chia 33 chu kỳ, \T{bcd} & TV1, TV4 \\
+hiện 8 chữ số & ghi RAM hiển thị, quét & TV4 \\
+đọc ghi thanh ghi đồng hồ & \T{lw}/\T{sw}, bản đồ địa chỉ & TV3 \\
+chạy đúng khi lệnh chồng nhau & forwarding, dừng load-use & TV2 \\ \bottomrule
+\end{tabular}}
+\note{Đây là chỗ nối đề tài với phần CPU. Một chiếc đồng hồ chính xác tới mili giây cần sáu việc, và mỗi việc đòi CPU một khả năng cụ thể. Đếm đúng mili giây thì CPU phải bước theo xung phép cpu ce. Bấm nút và báo thức kịp lúc thì cần ngắt có lưu địa chỉ quay về. Đổi mili giây ra giờ phút giây thì cần chia và lệnh bcd. Hiện tám chữ số thì phải ghi vào RAM hiển thị. Đọc ghi thanh ghi đồng hồ thì cần lệnh lw và sw qua bản đồ địa chỉ. Chạy đúng khi lệnh chồng nhau thì cần forwarding và dừng load-use.}
+\end{frame}
+
+% ================================================================== 3
+\who{TV3}
+\begin{frame}
+\frametitle{28 lệnh, gấp đôi tập tối thiểu của bài mẫu}
+\begin{columns}[T]
+\column{0.5\textwidth}
+{\small
+\begin{tabular}{@{}lc@{}}
+\toprule nhóm lệnh & số lệnh \\ \midrule
+R-type & 12 \\ I-type & 9 \\ J-type & 2 \\ SPECIAL2 (\T{mul}, \T{bcd}) & 2 \\ COP0 & 3 \\ \midrule
+\textbf{tổng} & \textbf{28} \\ \bottomrule
+\end{tabular}}
+\column{0.48\textwidth}
+22 lệnh MIPS chuẩn\par\smallskip
++ 6 lệnh nhóm thêm:\par
+\T{xor} \T{mul} \T{bcd}\par \T{mfc0} \T{mtc0} \T{eret}\par\medskip
+Bài mẫu (Nhóm 3): 14 lệnh.
+\end{columns}
+\note{Tập lệnh của nhóm có hai mươi tám lệnh, gấp đôi bài mẫu của nhóm ba kỳ trước, vốn chỉ có mười bốn lệnh. Hai mươi hai lệnh là phần MIPS chuẩn, như cộng, trừ, lw, sw, beq và các lệnh nhảy. Nhóm thêm sáu lệnh vì đồng hồ cần chúng. Lệnh mul, cùng với div có sẵn, dùng để đổi số mili giây ra giờ, phút, giây. Lệnh bcd đổi một số thành các chữ số thập phân để đưa lên màn hình, thay cho nhiều lần chia. Ba lệnh mfc0, mtc0 và eret thuộc nhóm CP0, dùng để làm việc với ngắt. Còn xor là lệnh logic còn thiếu trong tập chuẩn.}
+\end{frame}
+
+% ================================================================== 4
+\who{Long}
+\begin{frame}
+\frametitle{Ai giữ chặng nào của một lệnh}
+\centering\resizebox{\textwidth}{!}{\sodochang}
+\par\medskip
+Long: mở đầu, demo, so sánh và kết luận. Hỏi đáp: chỉ vào chặng nào, người giữ chặng đó trả lời.
+\note{Để thầy dễ theo dõi, nhóm chia đường đi của một lệnh thành năm chặng, mỗi bạn giữ một chặng: lấy lệnh, giải mã, tính toán, bộ nhớ và ghi về. Ngắt là chặng đặc biệt vì nó cắt ngang mọi lệnh. Em mở đầu, chạy demo, so sánh với bài mẫu và kết luận. Ở phần hỏi đáp, thầy chỉ vào chặng nào trên hình này thì bạn giữ chặng đó trả lời trước. Chúng em sẽ quay lại hình này ở slide cuối.}
+\end{frame}
+
+% ================================================================== 5
+\who{TV4}
+\begin{frame}
+\frametitle{G1: một lệnh xong trong 2 pha}
+\centering
+\resizebox{0.97\textwidth}{!}{\begin{tikzpicture}[font=\small,>=Stealth,
+  blk/.style={draw,rounded corners=2pt,minimum height=1.0cm,align=center,inner sep=3pt},
+  pa/.style={blk,fill=blue!12}, pb/.style={blk,fill=orange!25}, cmb/.style={blk,fill=white},
+  hot/.style={->,very thick,red!70!black}, ctl/.style={->,dashed,gray!60!black}]
+  \node[pa] (pc) at (0,0) {\T{pc}};
+  \node[pa] (im) at (2.5,0) {\T{imem}\\\T{instr}};
+  \node[pa] (rf) at (5.4,0) {\T{regfile}\\\T{rs\_v}};
+  \node[cmb] (al) at (9.6,0) {\T{alu}\\\T{alu\_y}};
+  \node[pb] (dm) at (13.2,0) {\T{dmem} · bus\\\T{bus\_re}};
+  \node[cmb] (ct) at (5.4,2.1) {\T{control}};
+  \node[cmb] (wb) at (9.6,-2.1) {\T{wb}\\\T{load\_v}};
+  \draw[->] (pc)--(im);
+  \draw[hot] (im)--(rf);
+  \draw[hot] (rf)--node[above,font=\footnotesize]{\T{rs\_v} + \T{imm\_x}}(al);
+  \draw[hot] (al)--node[above,font=\footnotesize]{\T{maddr}}(dm);
+  \draw[hot] (dm.south)|-node[below,pos=.75,font=\footnotesize]{\T{bus\_rdata}}(wb.east);
+  \draw[hot] (wb.west)-|node[below,pos=.25,font=\footnotesize]{ghi \T{\$t0}}(rf.south);
+  \draw[->] (im.north)|-(ct.west);
+  \draw[ctl] (ct.east)-|node[above,pos=.2,font=\footnotesize]{\T{mem\_read}, \T{mem\_to\_reg}}(dm.north);
+  \node[pa,minimum height=0.5cm,anchor=west] at (0,-2.9) {pha A};
+  \node[pb,minimum height=0.5cm,anchor=west] at (1.8,-2.9) {pha B};
+  \node[anchor=west,font=\footnotesize] at (3.6,-2.9) {đường đỏ: \T{lw \$t0, -252(\$zero)}};
+\end{tikzpicture}}
+\par\smallskip
+{\small Pha A: \T{pc}, regfile cập nhật, IMEM chốt lệnh mới. Pha B: DMEM và ngoại vi chốt. Vì BRAM đọc đồng bộ.}
+\note{G1 là bản đơn giản: mỗi lệnh xong trong một chu kỳ CPU. Nhưng bộ nhớ lệnh và bộ nhớ dữ liệu trong FPGA là BRAM đọc đồng bộ, nghĩa là địa chỉ phải được chốt ở một cạnh clock thì dữ liệu mới có ở cạnh sau. Vì vậy nhóm chia một chu kỳ CPU thành hai pha, tức hai cạnh clock. Pha A: pc và regfile cập nhật, bộ nhớ lệnh chốt luôn lệnh kế tiếp. Pha B: bộ nhớ dữ liệu và ngoại vi chốt địa chỉ. Em lấy lệnh lw đọc đồng hồ làm ví dụ, là đường đỏ trên hình. Lệnh nằm ở imem, control bật mem\_read, ALU cộng ra địa chỉ, sang pha B bus đọc ngoại vi, kết quả quay về wb rồi ghi vào regfile ở pha A kế tiếp.}
+\end{frame}
+
+% ================================================================== code 5
+\who{TV4}
+\begin{frame}
+\frametitle{Hai pha nằm ở đúng một khối \T{always}}
+\codeseg{\SRC cpu_g1.v}{200}{211}{202,205,211}
+\ann{dòng 202}{\T{phb <= 0}: pha B xong, lần sau là pha A.}
+\ann{dòng 205}{\T{lw} đọc DMEM vào \T{dmem\_q} ở pha B.}
+\ann{dòng 211}{\T{phb <= 1}: pha A xong, lần sau là pha B.}
+\par\smallskip{\footnotesize\color{gray} \T{src/cpu\_g1.v:200--211}}
+\note{Hai pha nằm gọn trong một khối always của cpu\_g1. Biến phb nhớ xem đang ở pha nào. Khi ở pha B, dòng ghi vào dmem chạy nếu là sw, còn nếu là lw thì đọc dmem vào dmem\_q. Xong pha B thì phb về không, như dòng hai trăm lẻ hai. Sang pha A, dòng hai trăm mười một đặt phb lên một để lần sau lại vào pha B. Mọi phép gán đều dùng mũi tên nhỏ bằng, nên tất cả thanh ghi đổi cùng lúc ở một cạnh clock. Đây chính là hai nửa của hình vừa rồi, nhưng viết bằng code. Nếu thầy hỏi vì sao cần hai pha, câu trả lời là vì bộ nhớ đọc đồng bộ.}
+\end{frame}
+
+% ================================================================== 6
+\who{TV4}
+\begin{frame}
+\frametitle{PC kế tiếp chọn theo 7 mức ưu tiên}
+\centering
+{\normalsize\begin{tabular}{@{}cll@{}}
+\toprule mức & điều kiện (từ trên xuống) & \T{next\_pc} \\ \midrule
+1 & \T{rst} & 0 \\
+2 & \T{stall} (\T{div}/\T{bcd} chưa xong) & \T{pc} \\
+3 & \T{eret} & \T{epc} \\
+4 & \T{jr} & \T{rs\_v} \\
+5 & \T{j} / \T{jal} & đích nhảy \\
+6 & \T{take} (\T{beq}/\T{bne} đúng) & \T{pc4 + imm\_x<<2} \\
+7 & còn lại & \T{pc4} \\ \bottomrule
+\end{tabular}}
+\par\smallskip
+Có ngắt: \T{pc\_new = take\_irq ? 0x180 : next\_pc}. \quad {\footnotesize\color{gray}\T{src/cpu\_g1.v:152--167}}
+\note{Khi hết một lệnh, pc kế tiếp được chọn theo bảy mức ưu tiên, viết thành chuỗi if else trong cpu\_g1, bắt đầu từ dòng một trăm năm mươi lăm. Trên cùng là reset, đưa pc về không. Dưới đó là đứng chờ khi div hay bcd chưa xong, giữ nguyên pc. Rồi đến eret quay về EPC, jr nhảy theo thanh ghi, j và jal nhảy theo trường địa chỉ. Tiếp theo là rẽ nhánh: nếu beq hay bne đúng thì cộng thêm offset. Cuối cùng là đi tiếp, cộng bốn.}
+\end{frame}
+
+% ================================================================== 7
+\who{TV3}
+\begin{frame}
+\frametitle{Một bảng chân lý điều khiển cả 28 lệnh}
+\centering
+{\small\begin{tabular}{@{}lcccccc@{}}
+\toprule lệnh & \T{reg\_write} & \T{alu\_src} & \T{mem\_read} & \T{mem\_write} & \T{mem\_to\_reg} & \T{branch} \\ \midrule
+\T{addu}  & 1 & 0 & 0 & 0 & 0 & 00 \\
+\T{addiu} & 1 & 1 & 0 & 0 & 0 & 00 \\
+\rowcolor{yellow!35}\T{lw}    & 1 & 1 & 1 & 0 & 1 & 00 \\
+\T{sw}    & 0 & 1 & 0 & 1 & 0 & 00 \\
+\rowcolor{yellow!35}\T{beq}   & 0 & 0 & 0 & 0 & 0 & 01 \\
+\T{bne}   & 0 & 0 & 0 & 0 & 0 & 10 \\
+\T{jal}   & 1 & 0 & 0 & 0 & 0 & 00 \\
+\T{mfc0}  & 1 & 0 & 0 & 0 & 0 & 00 \\ \bottomrule
+\end{tabular}}
+\par\smallskip
+{\small \T{control.v}: 17 tín hiệu ra, slide chỉ hiện 6.}
+\note{Toàn bộ điều khiển của hai mươi tám lệnh nằm trong một bảng chân lý, cài đặt thành module control. Nó có mười bảy tín hiệu ra, slide chỉ hiện sáu cột dễ hiểu nhất. Đọc dòng lw: reg\_write bật vì ghi vào thanh ghi, alu\_src bật vì lấy hằng số cộng với thanh ghi nền, mem\_read bật vì đọc bộ nhớ, mem\_to\_reg bật vì kết quả lấy từ bộ nhớ chứ không lấy từ ALU. Dòng beq thì chỉ có cột branch. Mọi tín hiệu được đặt mặc định là không làm gì, nên lệnh lạ tự ra toàn không, coi như nop.}
+\end{frame}
+
+% ================================================================== 8
+\who{TV3}
+\begin{frame}
+\frametitle{Regfile: đọc tổ hợp, ghi theo clock}
+\VerbatimInput[firstline=45,lastline=46,firstnumber=45,numbers=left,fontsize=\small,frame=lines,breaklines=true]{\SRC regfile.v}
+\begin{itemize}
+\item Đọc: dây, ra ngay. Ghi: chỉ ở cạnh lên \T{clk}.
+\item \T{\$0} luôn đọc ra 0.
+\item \T{G\_BYPASS}: G1 = 0 (ghi ở pha A). G2 = 1 (WB ghi trong lúc ID đọc).
+\end{itemize}
+\note{Regfile là ba mươi hai thanh ghi. Phần đọc là mạch tổ hợp nên đọc ra ngay, không chờ clock. Phần ghi chỉ xảy ra ở cạnh lên của clock. Thanh ghi số không luôn đọc ra không, nhờ lớp bộ chọn ngoài cùng ở hai dòng này. Tham số G\_BYPASS quyết định có đọc luôn giá trị đang được ghi hay không. G1 đặt bằng không, vì ghi ở pha A xong rồi mới đọc. G2 đặt bằng một, vì ở tầng WB đang ghi một thanh ghi trong khi tầng ID đọc đúng thanh ghi đó, nên cần bypass để lấy giá trị mới.}
+\end{frame}
+
+% ================================================================== code 8
+\who{TV3}
+\begin{frame}
+\frametitle{\T{lw} bật những tín hiệu nào: một nhánh \T{case}}
+\codeseg{\SRC control.v}{82}{91}{82,87,89}
+\ann{dòng 82}{\T{addiu}: \T{i\_alu}, không đụng bộ nhớ.}
+\ann{dòng 87}{\T{lw}: \T{i\_alu} + \T{mem\_read} + \T{mem\_to\_reg}.}
+\ann{dòng 89}{\T{sw}: \T{mem\_write}, không ghi thanh ghi.}
+\par\smallskip{\footnotesize\color{gray} \T{src/control.v:82--91}}
+\note{Đây là nhánh của lệnh lw trong control, dòng tám mươi bảy. Một dòng case gọi hàm i\_alu: lệnh kiểu I dùng ALU, ghi vào rt, lấy hằng số làm toán hạng B, mở rộng dấu, ALU làm phép cộng. Rồi thêm hai dấu hiệu riêng của lw: mem\_read bằng một và mem\_to\_reg bằng một. Nhờ mọi tín hiệu đã được đặt về không từ đầu, mỗi lệnh chỉ phải bật những gì nó cần. Lệnh sw ở dòng dưới thì bật mem\_write thay vì mem\_read, và không ghi thanh ghi.}
+\end{frame}
+
+% ================================================================== 9
+\who{TV1}
+\begin{frame}
+\frametitle{ALU 43 dòng làm 8 phép, \T{slt} đúng cả khi tràn}
+\VerbatimInput[firstline=26,lastline=26,firstnumber=26,numbers=left,fontsize=\small,frame=lines,breaklines=true]{\SRC alu.v}
+\smallskip
+{\small\begin{tabular}{@{}lcl@{}}
+\toprule \T{a} = 0, \T{b} = \T{0x80000000} & \T{diff[31]} & \T{lt} \\ \midrule
+chỉ nhìn bit dấu của \T{diff} & 1 & 1 \; sai \\
+đúng theo dòng 26 (\T{a[31]} $\neq$ \T{b[31]}) & --- & \T{a[31]} = 0 \; đúng \\ \bottomrule
+\end{tabular}}
+\note{ALU chỉ có bốn mươi ba dòng và làm tám phép: cộng, trừ, and, or, xor, so sánh nhỏ hơn, dịch trái và dịch phải số học. Điểm đáng nói là slt. Không thể chỉ nhìn bit dấu của hiệu a trừ b, vì phép trừ có thể tràn. Ví dụ a bằng không, b là số âm nhỏ nhất, 0x80000000. Hiệu quay vòng thành 0x80000000, bit dấu bằng một, nhìn dấu sẽ kết luận a nhỏ hơn b, và sai. Dòng lt xử lý như sau: nếu hai bit dấu khác nhau thì lấy bit dấu của a. Ở đây nó bằng không, nên slt ra không, đúng. Ca này có sẵn trong file test của ALU.}
+\end{frame}
+
+% ================================================================== 10
+\who{TV1}
+\begin{frame}
+\frametitle{Chia mất 33 chu kỳ, CPU phải chờ}
+\centering
+{\footnotesize 7 chia 2, ba bước cuối trong 32 bước (29 bước đầu: số dư giữ 0, bit thương 0)\par\smallskip}
+{\normalsize\begin{tabular}{@{}cccccc@{}}
+\toprule bước & bit kéo vào & \T{rem\_sh} & trừ 2 & vừa? & thương \\ \midrule
+30 & 1 & 1 & $-1$ & không, \T{rem}=1 & 0 \\
+31 & 1 & 3 & 1 & có, \T{rem}=1 & 1 \\
+32 & 1 & 3 & 1 & có, \T{rem}=1 & 1 \\ \bottomrule
+\end{tabular}}
+\par\smallskip
+{\small 7 chia 2 = 3 dư 1. \; 33 = 1 chu kỳ bắt đầu + 32 bước. \; Chia 0: 1 chu kỳ, \T{LO}=0, \T{HI}=\T{a}, \T{DZ}=1.}
+\note{Phép chia dùng thuật toán chia khôi phục, làm như chia tay. Mỗi bước dịch số dư sang trái một bit, kéo thêm một bit của số bị chia vào, rồi thử trừ số chia. Trừ được thì giữ hiệu và bit thương là một. Không được thì khôi phục, tức giữ số dư cũ, và bit thương là không. Ba mươi hai bit cần ba mươi hai bước, cộng một chu kỳ bắt đầu, tổng cộng ba mươi ba chu kỳ. Trong lúc đó CPU đứng chờ nhờ tín hiệu busy. Chia cho không được xử lý riêng: xong ngay trong một chu kỳ, LO bằng không, HI bằng số bị chia, và bật cờ DZ. Bảng là ví dụ bảy chia hai.}
+\end{frame}
+
+% ================================================================== code 10
+\who{TV1}
+\begin{frame}
+\frametitle{Một bước chia khôi phục trong code}
+\codeseg{\SRC muldiv.v}{44}{54}{45,46,47}
+\ann{dòng 45}{\T{trial}: thử trừ, 33 bit để thấy bit âm.}
+\ann{dòng 46}{\T{fits} = 1 khi hiệu không âm: đó là bit thương.}
+\ann{dòng 47}{vừa thì lấy hiệu, không vừa thì giữ số cũ (khôi phục).}
+\par\smallskip{\footnotesize\color{gray} \T{src/muldiv.v:44--54}}
+\note{Đây là một bước chia khôi phục, viết thành vài dòng dây. Dòng rem\_sh dịch số dư sang trái một bit và kéo bit cao nhất của quo vào. Dòng trial thử trừ, dùng ba mươi ba bit để nhìn thấy bit âm. Dòng fits bằng một khi hiệu không âm, đó chính là bit thương. Dòng rem\_n chọn: vừa thì lấy hiệu, không vừa thì lấy lại số dư cũ, đó chính là phần khôi phục. Tất cả là mạch tổ hợp, còn thanh ghi rem và quo chỉ cập nhật mỗi chu kỳ CPU, mỗi lần một bit.}
+\end{frame}
+
+% ================================================================== 11
+\who{TV3}
+\begin{frame}
+\frametitle{G2: chia lệnh thành 5 trạm, 4 thanh ghi tầng}
+\centering
+\resizebox{\textwidth}{!}{\begin{tikzpicture}[font=\small,>=Stealth,
+  st/.style={draw=navy,rounded corners=2pt,fill=blue!8,minimum width=1.7cm,minimum height=1.4cm,align=center},
+  rg/.style={draw,fill=orange!25,minimum width=1.5cm,minimum height=1.9cm,align=center,font=\footnotesize}]
+  \node[st] (if) at (0,0) {\textbf{IF}\\lấy lệnh};
+  \node[rg] (r1) at (2.15,0) {IF/ID\\65 bit};
+  \node[st] (id) at (4.2,0) {\textbf{ID}\\giải mã};
+  \node[rg] (r2) at (6.3,0) {ID/EX\\194 bit};
+  \node[st] (ex) at (8.35,0) {\textbf{EX}\\tính toán};
+  \node[rg] (r3) at (10.45,0) {EX/MEM\\73 bit};
+  \node[st] (me) at (12.5,0) {\textbf{MEM}\\bộ nhớ};
+  \node[rg] (r4) at (14.55,0) {MEM/WB\\71 bit};
+  \draw[->] (if)--(r1); \draw[->] (r1)--(id); \draw[->] (id)--(r2); \draw[->] (r2)--(ex);
+  \draw[->] (ex)--(r3); \draw[->] (r3)--(me); \draw[->] (me)--(r4);
+  \node[st,minimum width=1.5cm] (wb) at (14.55,-2.1) {\textbf{WB}\\ghi về};
+  \draw[->] (r4)--(wb);
+\end{tikzpicture}}
+\par\bigskip
+{\small G2 chạy 50 MHz, G1 chạy 25 MHz. Độ rộng chưa tính bit debug.}
+\note{Sang G2. Nhóm chia lệnh thành năm trạm như một dây chuyền: lấy lệnh, giải mã, tính toán, bộ nhớ, ghi về. Giữa hai trạm có một thanh ghi tầng giữ kết quả của trạm trước. IF/ID rộng sáu mươi lăm bit. ID/EX rộng một trăm chín mươi tư bit vì mang theo các công tắc điều khiển và hai toán hạng. EX/MEM bảy mươi ba bit, MEM/WB bảy mươi mốt bit, không tính bit debug. Mỗi chu kỳ, mỗi trạm làm việc cho một lệnh khác nhau, nên clock chỉ cần chờ trạm chậm nhất. Vì vậy G2 chạy 50 MHz, còn G1 chỉ 25 MHz.}
+\end{frame}
+
+% ================================================================== 12
+\who{TV2}
+\begin{frame}
+\frametitle{Hazard 1: dữ liệu chưa kịp ghi thì chuyền thẳng (forwarding)}
+\centering
+{\small\setlength{\tabcolsep}{4pt}\begin{tabular}{@{}l*{7}{c}@{}}
+\toprule & c1 & c2 & c3 & c4 & c5 & c6 & c7 \\ \midrule
+\T{subu \$2,\$1,\$3} & IF & ID & EX & MEM & WB & & \\
+\T{and \$12,\$2,\$5} & & IF & ID & \fw{EX $\leftarrow$10} & MEM & WB & \\
+\T{or \$13,\$6,\$2} & & & IF & ID & \fw{EX $\leftarrow$01} & MEM & WB \\
+\T{addu \$14,\$2,\$2} & & & & IF & ID & EX & MEM \\ \bottomrule
+\end{tabular}}
+\par\medskip
+{\small Điều kiện: lệnh sau ghi thanh ghi, đích $\neq$ 0, trùng nguồn. Ưu tiên EX/MEM (10) trước MEM/WB (01).}
+\note{Hazard thứ nhất: lệnh sau cần kết quả mà lệnh trước chưa kịp ghi vào regfile. Trên bảng, lệnh subu tính ra thanh ghi hai ở tầng EX. Lệnh and ngay sau cần thanh ghi hai, nhưng subu mới ở MEM. Giải pháp là forwarding: đưa kết quả từ EX/MEM thẳng về đầu vào ALU, mã mười. Lệnh or cần cùng thanh ghi sau thêm một chu kỳ, lấy từ MEM/WB, mã không một. Điều kiện trong hazard.v có ba vế: lệnh phía sau có ghi thanh ghi, thanh ghi đích khác không, và trùng thanh ghi nguồn. Khi cả hai nguồn đều trùng thì ưu tiên EX/MEM vì nó mới hơn. Khác không, vì thanh ghi zero luôn bằng không, không được lấy tắt.}
+\end{frame}
+
+% ================================================================== 13
+\who{TV2}
+\begin{frame}
+\frametitle{Hazard 2: load-use buộc dừng 1 chu kỳ}
+\centering
+{\small\setlength{\tabcolsep}{4pt}\begin{tabular}{@{}l*{7}{c}@{}}
+\toprule & c1 & c2 & c3 & c4 & c5 & c6 & c7 \\ \midrule
+\T{lw \$t0,0(\$s0)} & IF & ID & EX & MEM & WB & & \\
+\T{addu \$t1,\$t0,\$t2} & & IF & ID & \stl{ID*} & \fw{EX $\leftarrow$01} & MEM & WB \\
+(bong bóng) & & & & \bub{EX} & \bub{MEM} & \bub{WB} & \\ \bottomrule
+\end{tabular}}
+\par\medskip
+{\small \T{lw} chỉ có dữ liệu cuối MEM: chuyền thẳng không kịp. Chỉ chờ nếu \T{uses\_rs}/\T{uses\_rt}.}
+\note{Hazard thứ hai: load-use. Lệnh lw chỉ có dữ liệu ở cuối tầng MEM, trong khi lệnh sau cần nó ngay ở tầng EX của chu kỳ kế tiếp. Forwarding không cứu được vì lúc đó dữ liệu chưa tồn tại. Cách duy nhất là cho lệnh sau đứng chờ một chu kỳ, và chèn một bong bóng vào EX. Điều kiện stall\_lu có bốn vế: lệnh ở EX là load, thanh ghi đích khác không, lệnh ở ID hợp lệ, và nó thật sự đọc thanh ghi đó. Chữ thật sự rất quan trọng: nhóm dùng uses\_rs và uses\_rt để những lệnh như addiu, vốn không đọc rt, không phải chờ oan.}
+\end{frame}
+
+% ================================================================== code 13
+\who{TV2}
+\begin{frame}
+\frametitle{Điều kiện forwarding viết thành 4 dòng}
+\codeseg{\SRC hazard.v}{44}{53}{46,47,48}
+\ann{dòng 46}{lệnh ở MEM ghi, đích $\neq$ 0, trùng \T{idex\_rs}: chọn 10 (EX/MEM).}
+\ann{dòng 47}{chỉ khi dòng trên sai: 01 (MEM/WB). EX/MEM thắng vì mới hơn.}
+\ann{dòng 48}{không trùng: 00, dùng giá trị đọc ở ID.}
+\par\smallskip{\footnotesize\color{gray} \T{src/hazard.v:44--53}; toán hạng B (dòng 51--53) giống hệt, so với \T{rt}.}
+\note{Đây là phần forwarding trong hazard.v, mỗi toán hạng chỉ bốn dòng. Với toán hạng A, dòng bốn mươi sáu: nếu lệnh ở MEM có ghi thanh ghi, thanh ghi đích khác không và trùng rs của lệnh ở EX thì chọn mười, lấy từ EX/MEM. Dòng bốn mươi bảy làm tương tự cho MEM/WB, mã không một, nhưng chỉ khi dòng trên không đúng, nên EX/MEM thắng. Không trùng thì mã không không, dùng giá trị đã đọc ở ID. Toán hạng B viết y hệt, chỉ đổi rs thành rt.}
+\end{frame}
+
+% ================================================================== 14
+\who{TV4}
+\begin{frame}
+\frametitle{Hazard 3: nhánh quyết định ở EX, phạt 2 chu kỳ}
+\centering
+{\small\setlength{\tabcolsep}{4pt}\begin{tabular}{@{}l*{6}{c}@{}}
+\toprule & c1 & c2 & c3 & c4 & c5 & c6 \\ \midrule
+\T{beq \$s0,\$s2,L} & IF & ID & \hit{EX (nhảy)} & MEM & WB & \\
+\T{i+1} & & IF & ID & \bub{---} & & \\
+\T{i+2} & & & IF & \bub{---} & & \\
+\T{L:} & & & & IF & ID & EX \\ \bottomrule
+\end{tabular}}
+\par\medskip
+{\small Dự đoán không nhảy. Ở ID (bài mẫu): phạt 1 nhưng cần thêm bộ so sánh và forwarding về ID. Nếu có, firmware bớt tối đa 78 804 chu kỳ (11,4\%).}
+\note{Hazard thứ ba là nhánh. Nhóm quyết định beq và bne ở tầng EX, vì ở đó đã có sẵn forwarding và ALU. CPU luôn dự đoán không nhảy. Nếu nhảy thật, hai lệnh đã lấy nhầm phía sau bị xóa thành bong bóng, nên phạt hai chu kỳ. So với bài mẫu quyết định nhánh ở ID chỉ phạt một chu kỳ, nhóm em chịu phạt nhiều hơn, nhưng không phải thêm bộ so sánh và forwarding về tầng ID. Cái giá có số đo: nếu nhánh ở ID thì firmware bớt nhiều nhất bảy mươi tám nghìn tám trăm lẻ bốn chu kỳ, tức mười một phẩy bốn phần trăm.}
+\end{frame}
+
+% ================================================================== code 14
+\who{TV4}
+\begin{frame}
+\frametitle{Flush là ghi bong bóng vào hai thanh ghi tầng}
+\codeseg{\SRC cpu_pipe.v}{277}{280}{279}
+\codegap
+\codeseg{\SRC cpu_pipe.v}{292}{297}{293,294}
+\ann{dòng 279}{\T{idex\_v <= id\_ok}; \T{id\_ok} = 0 khi \T{take}: bong bóng vào ID/EX.}
+\ann{dòng 293}{\T{pc <= take ? tgt : pc + 4}: nạp đích nhảy.}
+\ann{dòng 294}{\T{ifid\_v <= !take}: lệnh vừa lấy nhầm thành bong bóng.}
+\note{Flush thực chất là ghi bong bóng vào hai thanh ghi tầng. Dòng hai trăm bảy mươi chín nạp idex\_v bằng id\_ok, và id\_ok bằng không khi có take, tức nhánh đang nhảy thật. Dòng hai trăm chín mươi ba nạp pc bằng đích tgt nếu take. Dòng hai trăm chín mươi tư đặt ifid\_v bằng not take, nghĩa là lệnh vừa lấy nhầm bị đánh dấu không hợp lệ. Hai thanh ghi tầng nhận bong bóng, mọi bit điều khiển bằng không, nên lệnh đó đi qua các tầng mà không làm gì.}
+\end{frame}
+
+% ================================================================== 15
+\who{TV1}
+\begin{frame}
+\frametitle{Hazard 4: \T{div}/\T{bcd} đóng băng dây chuyền}
+\centering
+{\normalsize\begin{tabular}{@{}ll@{}}
+\toprule tầng & khi \T{stall\_busy} = 1 \\ \midrule
+IF, ID & giữ nguyên lệnh \\
+EX & giữ \T{div}/\T{bcd}, chạy tiếp \\
+MEM & nhận bong bóng (EX chưa xong) \\
+WB & chạy nốt lệnh đã qua \\ \bottomrule
+\end{tabular}}
+\par\medskip
+{\small Thứ tự ưu tiên: \T{busy} > \T{flush} > load-use.}
+\note{Hazard thứ tư: div và bcd chiếm nhiều chu kỳ ở tầng EX. Trong lúc đó tín hiệu stall\_busy giữ cả dây chuyền. Bảng cho thấy tầng nào đứng, tầng nào chạy nốt. Hai tầng IF và ID giữ nguyên lệnh, tầng EX giữ lệnh div và tiếp tục chạy, tầng MEM nhận bong bóng vì EX chưa xong, còn tầng WB vẫn chạy nốt lệnh đã đi qua. Thứ tự ưu tiên là busy, rồi flush, rồi load-use. Busy cao nhất vì khi EX đang bận thì nhánh cũng không được quyết định, nên không thể flush.}
+\end{frame}
+
+% ================================================================== 16
+\who{TV5}
+\begin{frame}
+\frametitle{Ngắt: lưu chỗ đang chạy vào \T{EPC} rồi nhảy tới \T{0x180}}
+\centering
+\begin{tikzpicture}[font=\small,>=Stealth,
+  b/.style={draw=navy,rounded corners=3pt,fill=blue!6,minimum width=3.1cm,minimum height=1.5cm,align=center,inner sep=3pt}]
+  \node[b] (a) at (0,0) {có yêu cầu\\\T{irq}=1, \T{IE}=1,\\\T{EXL}=0};
+  \node[b] (b) at (3.8,0) {\T{EPC} $\leftarrow$ chỗ quay về\\\T{EXL} $\leftarrow$ 1\\\T{PC} $\leftarrow$ \T{0x180}};
+  \node[b] (c) at (7.6,0) {trình xử lý\\đọc \T{Cause}\\(\T{mfc0 \$13})};
+  \node[b] (d) at (11.4,0) {\T{eret}\\\T{PC} $\leftarrow$ \T{EPC}\\\T{EXL} $\leftarrow$ 0};
+  \draw[->,thick] (a)--(b); \draw[->,thick] (b)--(c); \draw[->,thick] (c)--(d);
+\end{tikzpicture}
+\par\medskip
+{\small \T{Status} = \T{\$12} (\T{EXL}, \T{IE}), \T{Cause} = \T{\$13}, \T{EPC} = \T{\$14}. G1: \T{EPC} = lệnh kế tiếp.}
+\note{Bây giờ là ngắt. CP0 có ba thanh ghi đọc bằng mfc0: Status là số mười hai, Cause là số mười ba, EPC là số mười bốn. Status có hai bit, IE là cho phép ngắt, EXL là đang xử lý ngắt. Khi có yêu cầu, IE bằng một và EXL bằng không, CPU làm ba việc: lưu chỗ đang chạy vào EPC, đặt EXL bằng một để chặn ngắt lồng nhau, rồi nhảy tới địa chỉ 0x180. Trình xử lý đọc Cause để biết nguồn ngắt. Cuối cùng eret đưa pc về EPC và xóa EXL. Ở G1, EPC lưu địa chỉ lệnh kế tiếp, vì lệnh hiện tại đã xong trọn vẹn.}
+\end{frame}
+
+% ================================================================== 17
+\who{TV5}
+\begin{frame}
+\frametitle{Ngắt chính xác ở pipeline: hủy 2 lệnh, cho 2 lệnh chạy nốt}
+\centering
+\begin{tikzpicture}[font=\small,
+  b/.style={draw,rounded corners=2pt,minimum width=2.7cm,minimum height=1.0cm,align=center}]
+  \node[b,fill=red!18] at (0,0) {IF/ID\\hủy};
+  \node[b,fill=red!18] at (3.0,0) {ID/EX\\hủy};
+  \node[b,fill=green!20] at (6.0,0) {EX/MEM\\chạy nốt};
+  \node[b,fill=green!20] at (9.0,0) {MEM/WB\\chạy nốt};
+\end{tikzpicture}
+\par\smallskip
+{\normalsize\begin{tabular}{@{}ll@{}}
+\toprule sự kiện đến khi & kết quả \\ \midrule
+\T{div} đang chạy & chờ \T{div} xong; \T{EPC} = lệnh sau \T{div} \\
+\T{beq} nhảy thật & \T{EPC} = đích nhánh \\
+load-use đang chờ & chờ hết stall \\ \bottomrule
+\end{tabular}}
+\par\smallskip
+{\small \T{EPC} = lệnh cũ nhất chưa xong, nên lệnh bị hủy chạy lại sau \T{eret}.}
+\note{Ở pipeline, nhiều lệnh nằm trên dây chuyền cùng lúc nên ngắt phải chính xác. Nhóm nhận ngắt ở ranh giới giữa ID và EX. Hai lệnh ở IF/ID và ID/EX bị hủy, không ghi gì, còn hai lệnh ở EX/MEM và MEM/WB được chạy nốt cho xong. EPC là địa chỉ của lệnh cũ nhất chưa xong, nên sau eret lệnh bị hủy được chạy lại. Có những lúc phải chờ: nếu đang div thì chờ div xong, vì giữa chừng thì không dừng được, kết quả là EPC trỏ về lệnh sau div.}
+\end{frame}
+
+% ================================================================== code 17
+\who{TV5}
+\begin{frame}
+\frametitle{Nhận ngắt: một dòng điều kiện, năm vế}
+\codeseg{\SRC cpu_g1.v}{164}{167}{166,167}
+\codegap
+\codeseg{\SRC cpu_pipe.v}{202}{204}{202}
+\ann{dòng 166 (G1)}{\T{irq}, \T{IE}=1, \T{EXL}=0, không \T{stall}, lệnh không phải CP0.}
+\ann{dòng 167 (G1)}{vào ngắt thì \T{pc\_new = 0x180}.}
+\ann{dòng 202 (G2)}{thêm load-use, \T{stall\_busy}, CP0 ở các tầng sau.}
+\note{Điều kiện nhận ngắt ở G1 nằm trên một dòng, dòng một trăm sáu mươi sáu. Năm vế nối bằng và: có yêu cầu irq, IE bằng một, EXL bằng không, không đang đứng chờ lệnh nhiều chu kỳ, và lệnh đang chạy không phải mtc0 hay eret. Dòng kế tiếp chọn pc mới là 0x180 nếu nhận ngắt. Ở G2, dòng hai trăm lẻ hai của cpu\_pipe cùng ý nhưng nhiều vế hơn, vì phải xét thêm load-use, stall\_busy và các lệnh CP0 đang ở những tầng sau.}
+\end{frame}
+
+% ================================================================== 18
+\who{TV3}
+\begin{frame}
+\frametitle{CPU nối vào đồng hồ qua bản đồ địa chỉ}
+\centering
+{\normalsize\begin{tabular}{@{}rllc@{}}
+\toprule offset & địa chỉ & thanh ghi & \\ \midrule
+$-252$ & \T{0xFFFFFF04} & \T{MS\_OF\_DAY} & đọc \\
+$-244$ & \T{0xFFFFFF0C} & \T{SET\_MS} & ghi \\ \bottomrule
+\end{tabular}}
+\par\medskip
+\T{lw \$t0, -252(\$zero)}: ALU ra \T{maddr} $\to$ \T{in\_mmio} $\to$ \T{bus\_re} $\to$ \T{load\_v} $\to$ \T{wb}.\par\smallskip
+{\small 24 bit cao toàn 1 là ngoại vi. Không có lệnh I/O riêng.}
+\note{Giờ sang ứng dụng. CPU nói chuyện với đồng hồ bằng lệnh lw và sw thường. Địa chỉ có hai mươi bốn bit cao toàn một, tức dạng 0xFFFFFFxx, là vùng ngoại vi. Ví dụ lw với offset âm hai trăm năm mươi hai, mở rộng dấu thành 0xFFFFFF04, đó là thanh ghi MS\_OF\_DAY, số mili giây trong ngày. ALU tính địa chỉ, in\_mmio bằng một, tín hiệu bus\_re bật ở pha B, khối RTC trả số mili giây về, và nó đi qua load\_v và wb vào thanh ghi. Không có lệnh đặc biệt nào cho vào ra.}
+\end{frame}
+
+% ================================================================== 19
+\who{TV5}
+\begin{frame}
+\frametitle{Đếm 1 ms bằng phần cứng, không bằng phần mềm}
+\centering
+\begin{tikzpicture}[font=\small,>=Stealth,
+  b/.style={draw=navy,rounded corners=3pt,fill=blue!6,minimum width=3.3cm,minimum height=1.4cm,align=center,inner sep=3pt}]
+  \node[b] (a) at (0,0) {\T{clk} 50 MHz};
+  \node[b] (b) at (4.6,0) {\T{timebase}\\\T{cnt} đếm tới \T{G\_N}\\(+ \T{CAL})};
+  \node[b] (c) at (9.2,0) {\T{tick} mỗi ms\\$\to$ RTC, hiển thị,\\hẹn giờ};
+  \draw[->,thick] (a)--(b); \draw[->,thick] (b)--(c);
+\end{tikzpicture}
+\par\medskip
+{\small Board: \T{G\_N} = 50 000 chu kỳ/ms. Mô phỏng: \T{G\_N} = 50. CPU không có clock riêng, chỉ có xung phép \T{cpu\_ce}.}
+\note{Một mili giây được đếm bằng phần cứng. Khối timebase đếm chu kỳ clock năm mươi MHz, đủ năm mươi nghìn chu kỳ thì phát một xung tick. Khi mô phỏng, nhóm đặt G\_N bằng năm mươi để mili giây ngắn đi một nghìn lần, tức một mili giây mô phỏng chỉ là năm mươi chu kỳ. Thanh ghi CAL cộng thêm một phần nhỏ để hiệu chỉnh sai số thạch anh. Lý do không để CPU tự đếm: số lệnh CPU chạy được trong một mili giây thay đổi theo tốc độ CPU và theo những lệnh chia, nên phần mềm sẽ đếm lệch.}
+\end{frame}
+
+\who{TV5}
+\begin{frame}
+\frametitle{Hiệu chỉnh thạch anh bằng \T{CAL}: 1 ppm = 3 276,8 đơn vị}
+\centering
+{\small
+1 ms = 50 000 chu kỳ; 1 ppm của nó = 0,05 chu kỳ\par
+0,05 $\times$ 65 536 = 3 276,8 \par\medskip
+\begin{tabular}{@{}rrl@{}}
+\toprule thạch anh lệch & \T{CAL} & lệch còn lại \\ \midrule
++20 ppm & 65 500 & +0,02 ppm \\
++250 ppm & 0 (từ chối) & +250 ppm \\ \bottomrule
+\end{tabular}}
+\note{Thạch anh thật luôn lệch vài chục ppm, nên đồng hồ có thanh ghi hiệu chỉnh CAL. Một mili giây có năm mươi nghìn chu kỳ clock. Một ppm của nó là không phẩy không năm chu kỳ. Thanh ghi CAL tính phần lẻ theo một phần sáu mươi lăm nghìn năm trăm ba mươi sáu của chu kỳ, nên một ppm tương ứng ba nghìn hai trăm bảy mươi sáu phẩy tám đơn vị CAL. Thạch anh nhanh hai mươi ppm thì firmware tính ra CAL bằng sáu mươi lăm nghìn năm trăm, lý tưởng là sáu mươi lăm nghìn năm trăm ba mươi sáu, thiếu ba mươi sáu do chia nguyên. Sau hiệu chỉnh còn lệch không phẩy không hai ppm.}
+\end{frame}
+
+\who{TV2}
+\begin{frame}
+\frametitle{Bấm nút: ngắt nhanh hơn polling, capture phần cứng chụp đúng lúc}
+\centering
+{\normalsize\begin{tabular}{@{}rlc@{}}
+\toprule \T{D} (CPU) & cách & trễ min / TB / max ($\mu$s) \\ \midrule
+2 (25 triệu lệnh/s) & polling & 0,18 / 0,99 / 1,80 \\
+2 & ngắt & 0,08 / 0,64 / 1,38 \\
+1526 (giả lập 32 kHz) & polling & 108 / 740 / 1 358 \\
+1526 & ngắt & 31 / 466 / 1 037 \\
+mọi \T{D} & capture phần cứng & \textbf{0}, 6 000/6 000 lần \\ \bottomrule
+\end{tabular}}
+\note{Đây là thí nghiệm E3: đo độ trễ khi lấy thời điểm bấm nút, và là chỗ ngắt của CPU phục vụ đồng hồ. Testbench bấm nút một nghìn lần ở thời điểm ngẫu nhiên và đo bốn cách. Ở CPU nhanh, hai mươi lăm triệu lệnh một giây, polling trễ trung bình khoảng một micro giây, ngắt hơi nhanh hơn. Khi hạ CPU xuống giả lập chip đồng hồ ba mươi hai kilohertz, polling trễ trung bình bảy trăm bốn mươi micro giây, tối đa một nghìn ba trăm năm mươi tám, ngắt tốt hơn nhưng vẫn gần nửa mili giây. Capture phần cứng chụp thời điểm ngay chu kỳ bấm nên trễ bằng không, sáu nghìn trên sáu nghìn lần.}
+\end{frame}
+
+% ================================================================== 20
+\who{TV4}
+\begin{frame}
+\frametitle{Hiển thị: 8 chữ số dùng chung 7 chân đoạn}
+\centering
+\begin{tikzpicture}[font=\small,
+  d/.style={draw,minimum width=1.3cm,minimum height=1.1cm,align=center}]
+  \foreach \i in {0,...,7} {\node[d] at (1.5*\i,0) {\i};}
+  \node[d,fill=yellow!60] at (4.5,0) {3};
+  \foreach \i in {0,...,7} {\draw[gray] (1.5*\i,-0.55)--(1.5*\i,-1.2);}
+  \draw[thick] (-0.2,-1.2)--(10.7,-1.2);
+  \node[font=\footnotesize,anchor=north] at (5.25,-1.25) {7 chân đoạn dùng chung};
+\end{tikzpicture}
+\par\medskip
+{\small Mỗi lúc sáng 1 chữ số, quét lần lượt. Giữa hai chữ số: khoảng tắt hết (chống bóng ma). \T{bcd} đổi số thành chữ số.}
+\note{Hiển thị có tám chữ số LED bảy đoạn dùng chung bảy chân đoạn. Vì vậy mỗi lúc chỉ sáng một chữ số: chân đoạn hiện hình của chữ số đó, anode tương ứng bật, các anode khác tắt. Quét đủ nhanh thì mắt thấy cả tám chữ số cùng sáng. Giữa hai chữ số có một khoảng tắt hết, để anode cũ kịp tắt, nếu không chữ số trước bị lem sang chữ số sau, gọi là bóng ma. Lệnh bcd làm việc ở phía trước: đổi số mili giây thành tám chữ số thập phân rồi ghi vào RAM hiển thị.}
+\end{frame}
+
+% ================================================================== 21
+\who{Long}
+\begin{frame}
+\frametitle{Demo: 23:59:55 sang 00:00:05}
+\begin{itemize}
+\item \T{bash tools/run\_unit.sh soc\_clock}
+\item \T{python tools/screen.py work/screen\_soc\_clock.log --big}
+\item Dự phòng: \T{work/demo\_system.gif} (5 chế độ)
+\end{itemize}
+\par\medskip
+{\color{acc}\bfseries Mô phỏng, chưa nạp board. \T{G\_N} = 50. Demo chạy trên G1.}
+\note{Bây giờ là phần demo. Em chạy bài soc\_clock: đồng hồ đang ở hai mươi ba giờ năm mươi chín phút năm mươi lăm giây, đếm qua nửa đêm sang không giờ, không phút, năm giây. Màn hình ảo vẽ tám chữ số từ log mô phỏng. Đây là mô phỏng, chưa nạp lên board, và G\_N bằng năm mươi nên một mili giây chỉ có năm mươi chu kỳ, nếu không thì chạy một giây thật sẽ mất rất lâu. Demo chạy trên lõi G1.}
+\end{frame}
+
+% ================================================================== 22
+\who{TV2}
+\begin{frame}
+\frametitle{Tin chip đúng vì 3 lớp kiểm}
+\centering
+\begin{tikzpicture}[font=\small,
+  b/.style={draw=navy,rounded corners=3pt,text width=4.1cm,minimum height=3.0cm,align=center,inner sep=4pt}]
+  \node[b,fill=blue!8] at (0,0) {\textbf{1. Từng khối}\\[2pt]\T{alu\_tb}: 4 200 ca\\\T{regfile\_tb}: 2 040 kiểm\\\T{system\_tb}: 589 kiểm};
+  \node[b,fill=green!10] at (4.8,0) {\textbf{2. Co-sim từng lệnh}\\[2pt]RTL so với ISS: 25 chương trình\\ISS so với MARS: 19 chương trình};
+  \node[b,fill=orange!15] at (9.6,0) {\textbf{3. Đột biến}\\[2pt]cài lỗi, test phải bắt\\ví dụ ngắt: 3/3 bị bắt};
+\end{tikzpicture}
+\note{Vì sao nhóm tin chip đúng? Có ba lớp kiểm. Lớp một là kiểm từng khối: ALU có bốn nghìn hai trăm ca thử, regfile có hai nghìn bốn mươi lần kiểm, và system\_tb chạy cả firmware với năm trăm tám mươi chín lần kiểm. Lớp hai là co-sim: chạy chương trình trên RTL và trên mô hình ISS, so từng lệnh, hai mươi lăm chương trình đều đạt. Nếu ISS sai thì ai bắt? Nhóm đối chiếu ISS với MARS, trình mô phỏng MIPS công khai, mười chín chương trình đạt. Lớp ba là đột biến: cài lỗi vào code rồi xem test có bắt không.}
+\end{frame}
+
+% ================================================================== code 22
+
+% ================================================================== 23
+\who{TV1}
+\begin{frame}
+\frametitle{CPI 2,027 so với 1,428, mà G2 vẫn nhanh hơn}
+\centering
+{\small thời gian = số lệnh $\times$ CPI / tần số \quad (G1 25 MHz, G2 50 MHz)\par\medskip}
+{\normalsize\begin{tabular}{@{}lccc@{}}
+\toprule chương trình & G1 ($\mu$s) & G2 ($\mu$s) & G2 nhanh hơn \\ \midrule
+\T{sum100} & 12,2 & 10,0 & $\times$1,21 \\
+\T{fact10} & 4,9 & 3,6 & $\times$1,34 \\
+\T{bcd} & 18,2 & 13,1 & $\times$1,39 \\ \bottomrule
+\end{tabular}}
+\note{CPI là số chu kỳ trung bình cho một lệnh. Trên firmware chính, G1 có CPI là một phẩy bốn hai tám, G2 là hai phẩy không hai bảy, tức G2 mất nhiều chu kỳ hơn cho mỗi lệnh. Nhưng thời gian bằng số lệnh nhân CPI chia cho tần số, và G2 chạy tần số gấp đôi. Trên ba chương trình đo riêng, G2 nhanh hơn một phẩy hai mốt, một phẩy ba bốn và một phẩy ba chín lần. Một lưu ý trung thực: firmware chính chủ yếu là vòng polling, G2 nhanh hơn nên chạy nhiều lệnh hơn trong cùng thời gian mô phỏng.}
+\end{frame}
+
+% ================================================================== code 23
+\who{TV1}
+\begin{frame}
+\frametitle{G2 mất chu kỳ ở đâu (firmware, 689 566 chu kỳ)}
+\centering
+{\normalsize\begin{tabular}{@{}lrr@{}}
+\toprule nguyên nhân & chu kỳ mất & phần \\ \midrule
+nhánh (2 chu kỳ mỗi lần nhảy) & 157 608 & 22,9\% \\
+\T{busy} (\T{div} 33, \T{bcd} 28 chu kỳ) & 157 114 & 22,8\% \\
+load-use & 33 857 & 4,9\% \\ \bottomrule
+\end{tabular}}
+\par\medskip
+{\small Còn lại: 340 257 chu kỳ chạy lệnh (49,3\%) và 686 chu kỳ ngắt (0,1\%).}
+\note{Bảng này trả lời câu hỏi G2 mất chu kỳ ở đâu trên firmware thật. Mỗi lần nhánh nhảy phạt hai chu kỳ, tổng cộng một trăm năm mươi bảy nghìn sáu trăm lẻ tám chu kỳ, hai mươi hai phẩy chín phần trăm. Lệnh div và bcd làm tầng EX bận, mất một trăm năm mươi bảy nghìn một trăm mười bốn chu kỳ. Load-use mất ba mươi ba nghìn tám trăm năm mươi bảy. Mỗi lệnh div tốn như nhau ở hai lõi, ba mươi ba chu kỳ, vì hai lõi dùng chung khối chia.}
+\end{frame}
+
+% ================================================================== 24
+\who{Long}
+\begin{frame}
+\frametitle{Hơn bài mẫu ở đâu, kém ở đâu}
+\centering
+{\normalsize\begin{tabular}{@{}lll@{}}
+\toprule & Nhóm 3 (mẫu) & Nhóm mình \\ \midrule
+tập lệnh & 14 lệnh & 28 lệnh \\
+lõi & pipeline & G1 + G2, cùng SoC \\
+ngoài CPU & không có & SoC đồng hồ \\
+kiểm thử & 1 chương trình, xem sóng & co-sim từng lệnh \\
+tài nguyên & không có & LUT/FF (Yosys) \\ \midrule
+\rowcolor{red!10}nhánh & ở ID, phạt 1 & ở EX, phạt 2 \\
+\rowcolor{red!10}chạy & --- & chỉ mô phỏng \\ \bottomrule
+\end{tabular}}
+\note{Em so sánh nhóm với bài mẫu của nhóm ba kỳ trước. Nhóm hơn ở năm điểm: tập lệnh hai mươi tám lệnh so với mười bốn, có hai lõi, có cả ứng dụng đồng hồ, kiểm thử đối chiếu từng lệnh thay vì một chương trình tổng từ một đến mười, và có đo tài nguyên. Nhóm kém ở hai điểm. Thứ nhất, nhánh quyết định ở EX phạt hai chu kỳ, trong khi mẫu quyết định ở ID chỉ phạt một. Thứ hai, nhóm chỉ mô phỏng, không có Fmax vì máy không có Vivado.}
+\end{frame}
+
+% ================================================================== 25
+\who{Long}
+\begin{frame}
+\frametitle{Hạn chế và phần mở rộng}
+\begin{itemize}
+\item Chỉ mô phỏng; không board, không Fmax. LUT/FF là của Yosys.
+\item G2 chỉ chạy trong hồi quy; demo là G1.
+\item Phần lớn code do AI viết; mỗi người đã đọc, chạy lại lát của mình (phụ lục A).
+\item Mở rộng: UART, VGA, còi (phụ lục D).
+\end{itemize}
+\note{Về hạn chế, em xin nói thẳng. Một, chỉ mô phỏng, chưa có board. Hai, không có Fmax vì không có Vivado, số LUT và FF là của Yosys, không phải của Vivado. Ba, G2 chỉ chạy trong bộ hồi quy, còn demo là G1. Bốn, phần lớn code do AI viết theo yêu cầu của nhóm, từng thành viên đã đọc, chạy lại và hiểu phần của mình; phân công và phần AI hỗ trợ được khai ở phụ lục A. Phần mở rộng UART, VGA và còi nằm ở phụ lục D.}
+\end{frame}
+
+% ================================================================== 26
+\who{cả nhóm}
+\begin{frame}
+\frametitle{Hỏi đáp: thầy chỉ vào chặng nào, người giữ chặng đó trả lời}
+\centering\resizebox{\textwidth}{!}{\sodochang}
+\note{Chúng em xin dừng phần trình bày. Thầy có thể chỉ vào chặng nào trên hình thì bạn giữ chặng đó sẽ trả lời trước, bạn ở chặng kề bên bổ sung khi cần. Nếu không chắc, nhóm sẽ nói là chưa chắc và mở code để kiểm tra, không đoán. Các bạn đã mở sẵn file của lát mình trong editor có số dòng, và có sẵn terminal để chạy test nếu thầy yêu cầu. Câu hỏi về dòng code nào thì chủ lát mở đúng dòng đó. Chúng em xin cảm ơn thầy.}
+\end{frame}
+
+% ================================================================== SLIDE DỰ PHÒNG (không trình bày)
+\appendix
+
+\who{dự phòng}
+\begin{frame}
+\frametitle{Dự phòng 1 (T4): \T{lw} rồi \T{beq} dùng ngay kết quả}
+\centering
+{\small\setlength{\tabcolsep}{4pt}\begin{tabular}{@{}l*{6}{c}@{}}
+\toprule & c1 & c2 & c3 & c4 & c5 & c6 \\ \midrule
+\T{lw \$t0,0(\$s0)} & IF & ID & EX & MEM & WB & \\
+\T{beq \$t0,\$zero,L} & & IF & ID & \stl{ID*} & \fw{EX $\leftarrow$01, quyết định} & MEM \\ \bottomrule
+\end{tabular}}
+\par\medskip
+{\small Nhánh ở EX: 1 bong bóng. Nhánh ở ID: 2 bong bóng. Ca bài mẫu dễ sót.}
+\note{Dự phòng: ca lw rồi beq dùng ngay kết quả của lw. Với nhánh quyết định ở EX, ca này chỉ cần một bong bóng: ở chu kỳ ba phát hiện load-use, chu kỳ bốn đứng chờ, chu kỳ năm forwarding từ MEM/WB và quyết định nhánh. Nếu nhánh quyết định ở ID thì cần hai bong bóng, vì tầng ID phải chờ dữ liệu của lw tới tận cuối tầng MEM. Đây là ca bài mẫu dễ sót, và là một lý do nhóm chọn quyết định nhánh ở EX.}
+\end{frame}
+
+
+\begin{frame}
+\frametitle{Dự phòng 2: tài nguyên LUT/FF (Yosys, không phải Vivado)}
+\centering
+{\normalsize\begin{tabular}{@{}lrr@{}}
+\toprule khối & LUT & FF \\ \midrule
+\T{cpu\_g1} (lõi) & 2 014 & 1 311 \\
+\T{cpu\_g2} (lõi) & 2 273 & 1 758 \\
+\T{soc\_g1} (SoC đầy đủ) & 3 701 & 2 767 \\
+\T{soc\_g2} (SoC đầy đủ) & 3 754 & 3 217 \\ \midrule
++ \T{bcd} tổ hợp (G1) & +416 & \\
++ \T{RTC\_BCD} (G1) & +150 & \\ \bottomrule
+\end{tabular}}
+\par\smallskip{\small Không có Vivado nên không có Fmax.}
+\note{Dự phòng: tài nguyên. Số LUT và FF do Yosys tổng hợp cho Xilinx bảy series, không phải do Vivado, và máy nhóm không có Vivado nên không có Fmax. Lõi G1 hai nghìn mười bốn LUT, lõi G2 hai nghìn hai trăm bảy mươi ba, tăng khoảng một phần ba flip flop vì có thêm các thanh ghi tầng. Cả SoC đầy đủ là ba nghìn bảy trăm lẻ một LUT với G1 và ba nghìn bảy trăm năm mươi tư với G2. Dùng lệnh bcd bản tổ hợp tốn thêm bốn trăm mười sáu LUT, bộ đếm BCD phần cứng thêm một trăm năm mươi.}
+\end{frame}
+
+
+\begin{frame}
+\frametitle{Dự phòng 3: bộ test tra tấn hazard, mỗi file kiểm gì}
+\centering
+{\footnotesize\setlength{\tabcolsep}{3pt}\begin{tabular}{@{}lp{9.3cm}@{}}
+\toprule file & nội dung \\ \midrule
+\T{raw\_chain} & chuỗi RAW liên tiếp; ưu tiên EX/MEM \\
+\T{load\_use} & \T{lw} $\to$ dùng \T{rs}, \T{rt}, \T{sw}; \T{lw} $\to$ \T{addiu} (không được stall) \\
+\T{branch} & \T{beq}/\T{bne} nhảy và không nhảy; nhánh sau \T{lw} \\
+\T{jump} & \T{j}, \T{jal}, \T{jr} ngay; \T{jr} sau \T{lw \$ra} \\
+\T{multi} & \T{div}, chia 0, \T{lw} $\to$ \T{div} \\
+\T{cp0} & \T{mtc0}/\T{mfc0} xen \T{mfhi}; \T{eret} \\
+\T{bcd\_busy} & \T{bcd} tuần tự rồi \T{sw} ngay; \T{bcd} tổ hợp \\
+\T{zero\_reg} & ghi vào \T{\$0} rồi dùng \T{\$0} (không được forward) \\
+\T{mmio\_once} & \T{lw} MMIO trong bóng nhánh không chạy; sau \T{div} chạy đúng 1 lần \\ \bottomrule
+\end{tabular}}
+\note{Dự phòng: nội dung chín file tra tấn hazard. Raw chain kiểm chuỗi phụ thuộc liên tiếp và ưu tiên EX/MEM. Load use kiểm lw rồi dùng ở rs, ở rt, ở sw, và ca lw rồi addiu không được stall. Branch kiểm nhánh nhảy và không nhảy, cùng nhánh ngay sau lw. Jump kiểm j, jal và jr ngay sau. Multi kiểm div, chia cho không và lw rồi div. Cp0 kiểm mtc0 và mfc0 xen mfhi, cùng eret. Bcd busy kiểm lệnh bcd rồi dùng ngay kết quả. Zero reg kiểm ghi vào thanh ghi không không được forward. Mmio once kiểm lệnh lw ngoại vi không chạy khi nằm trong bóng nhánh, và chỉ chạy một lần khi nằm sau div.}
+\end{frame}
+
+\begin{frame}
+\frametitle{Dự phòng 4: chín chương trình hazard, số bong bóng khớp trace}
+\centering
+{\normalsize\setlength{\tabcolsep}{5pt}\begin{tabular}{@{}lc@{\hspace{1.2cm}}lc@{}}
+\toprule test & bong bóng & test & bong bóng \\ \midrule
+\T{raw\_chain} & 0 & \T{jump} & 9 \\
+\T{zero\_reg} & 0 & \T{multi} & 65 \\
+\T{load\_use} & 3 & \T{bcd\_busy} & 54 \\
+\T{branch} & 9 & \T{mmio\_once} & 34 \\
+\T{cp0} & 2 & & \\ \bottomrule
+\end{tabular}}
+\par\medskip
+{\small \T{fw/tests/hazard/}. Mỗi file so trace với ISS từng dòng; số dự kiến ghi ở đầu file.}
+\note{Chín chương trình tra tấn hazard nằm trong thư mục fw tests hazard. Mỗi file tự kiểm bằng cách so trace pipeline với ISS từng dòng, đồng thời đếm số bong bóng. Số dự kiến được ghi ngay đầu file: raw\_chain và zero\_reg bằng không, load\_use ba, branch và jump chín, cp0 hai, đó là eret phạt hai chu kỳ. Các test có div hay bcd nhiều chu kỳ thì lớn hơn: multi sáu mươi lăm, bcd\_busy năm mươi tư, mmio\_once ba mươi tư. Nhóm đã đối chiếu số đếm từ trace với số ghi trong file, và cả chín đều khớp.}
+\end{frame}
+
+\end{document}

@@ -1,0 +1,335 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Phân công 5 lát CPU và bộ học tập</title>
+<style>
+:root{--bg:#fff;--fg:#1d2430;--mut:#5b6575;--line:#d9dee7;--card:#f5f7fb;--acc:#1f3d7a;--ok:#1b7a43;--warn:#b25b00;--bad:#b3261e;--hl:#fff4c2;--code:#eef1f6}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#12161d;--fg:#e3e8f0;--mut:#9aa6b8;--line:#2b3340;--card:#1a202a;--acc:#8fb0ff;--ok:#5fd18a;--warn:#f0a959;--bad:#ff8a80;--hl:#3b3512;--code:#222a36}}
+:root[data-theme="dark"]{--bg:#12161d;--fg:#e3e8f0;--mut:#9aa6b8;--line:#2b3340;--card:#1a202a;--acc:#8fb0ff;--ok:#5fd18a;--warn:#f0a959;--bad:#ff8a80;--hl:#3b3512;--code:#222a36}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif}
+header{padding:20px 16px 8px;max-width:1100px;margin:0 auto}
+h1{font-size:1.6rem;margin:0 0 4px;color:var(--acc)}
+h2{font-size:1.25rem;margin:0 0 10px;color:var(--acc);border-bottom:2px solid var(--line);padding-bottom:4px}
+h3{font-size:1.05rem;margin:14px 0 6px}
+nav{position:sticky;top:0;background:var(--bg);border-bottom:1px solid var(--line);z-index:5}
+nav div{max-width:1100px;margin:0 auto;padding:6px 16px;display:flex;gap:6px 14px;flex-wrap:wrap;align-items:center;font-size:.9rem}
+nav a{color:var(--acc);text-decoration:none}
+nav button{margin-left:auto}
+main{max-width:1100px;margin:0 auto;padding:8px 16px 60px}
+section{margin:26px 0}
+.mut{color:var(--mut);font-size:.92rem}
+.card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:12px 14px;margin:10px 0}
+.tbl{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:.92rem}
+th,td{border:1px solid var(--line);padding:6px 8px;text-align:left;vertical-align:top}
+th{background:var(--card)}
+code{background:var(--code);padding:1px 5px;border-radius:4px;font:.88em ui-monospace,Consolas,monospace;word-break:break-word}
+.tag{display:inline-block;border-radius:10px;padding:0 8px;font-size:.78rem;border:1px solid var(--line);margin-right:4px;white-space:nowrap}
+.v{color:var(--ok);border-color:var(--ok)}.u{color:var(--bad);border-color:var(--bad)}.i{color:var(--warn);border-color:var(--warn)}
+.bar{display:inline-block;height:10px;background:var(--acc);border-radius:3px;vertical-align:middle}
+.hl{background:var(--hl)}
+details{border:1px solid var(--line);border-radius:8px;margin:8px 0;background:var(--card)}
+summary{cursor:pointer;padding:8px 12px;font-weight:600}
+details>div{padding:4px 14px 12px}
+ul{margin:4px 0 4px 20px;padding:0}
+button{font:inherit;font-size:.85rem;padding:3px 10px;border:1px solid var(--line);background:var(--bg);color:var(--fg);border-radius:6px;cursor:pointer}
+button:hover{border-color:var(--acc)}
+pre{background:var(--code);padding:10px;border-radius:6px;overflow-x:auto;white-space:pre-wrap;font:.85rem/1.45 ui-monospace,Consolas,monospace;margin:6px 0}
+.row{display:flex;gap:8px;align-items:flex-start;justify-content:space-between}
+@media(max-width:600px){h1{font-size:1.3rem}th,td{padding:4px 5px}}
+</style>
+</head>
+<body>
+<header>
+<h1>Phân công 5 lát CPU và bộ học tập</h1>
+<div class="mut">Bảo vệ 25/11/2026 · dựng 12/11/2026 · nguồn chính: <code>report/BRIEF-25-11.md</code>, <code>src/</code>, <code>report/doi-chieu-nhom3.md</code>, <code>learn/on-tap-btl/PLAN.md</code>.
+Nhãn: <span class="tag v">verified</span> đọc/đếm lại từ file · <span class="tag i">inference</span> suy luận của người dựng, Long sửa được · <span class="tag u">unverified</span> chưa kiểm.</div>
+</header>
+<nav><div>
+<a href="#tomtat">Tóm tắt</a><a href="#nhiemvu">1 Nhiệm vụ</a><a href="#dokho">2 Độ khó, độ dày</a><a href="#kienthuc">3 Kiến thức, câu xoáy</a><a href="#bohoc">4 Bộ học tập</a><a href="#ngoailoi">5 Phần ngoài lõi</a><a href="#mau">6 So với bài mẫu</a><a href="#chot">7 Long chốt</a>
+<button id="theme" type="button">Sáng/Tối</button></div></nav>
+<main>
+
+<section id="tomtat">
+<h2>Tóm tắt</h2>
+<div class="card">
+<ul>
+<li>CPU chia 5 lát theo đường đi một lệnh: <b>TV1</b> EX/số học · <b>TV2</b> hazard/forwarding/MEM/WB · <b>TV3</b> ID/control · <b>TV4</b> IF/PC/nhánh/2 pha G1/<code>bcd</code> · <b>TV5</b> CP0/ngắt/<code>cpu_ce</code>. Long là một trong 5 TV (brief mục 1).</li>
+<li>Lát nặng nhất để <b>đọc</b>: TV3 (238 dòng). Lát khó nhất để <b>bị hỏi xoáy</b>: TV2 và TV4 (21/25 điểm khó, <span class="tag i">inference</span>). Lát nhẹ nhất: TV1 (13/25), nhưng TV1 cũng giữ firmware <code>main.s</code> 1 230 dòng ở phần ứng dụng.</li>
+<li><b>Đã cân lại 12/11 (phương án B):</b> đề đăng ký là SoC đồng hồ có CPU tự thiết kế, nên đồng hồ là bài toán dẫn dắt. Slide có 36 slide chính: thêm slide 3 cầu nối "đồng hồ cần gì, CPU phải có gì", slide <code>CAL</code> (TV5), slide bấm nút E3 (TV2). Báo cáo chương 3 từ 8 lên 12 trang.</li>
+<li>Phần ngoài lõi còn lại (UART, VGA, DSE, E4′, nút bấm, còi...) <b>không có slide chính</b>. Mỗi khối có một người trả lời 1 câu mở đầu, hỏi sâu thì nói thật: phần mở rộng, AI hỗ trợ, đã khai ở phụ lục A (mục 5).</li>
+<li>Bộ học: V0, P1–P5, C0, U1 đã có bản nguồn (12/11, trong <code>learn/on-tap-btl/nguon/02-code.md</code>, máy kiểm PASS). Việc còn lại là người thật đọc, làm MCQ và nói thử. Cổng 1 vào 16/11 (mục 4).</li>
+<li>Đã có thêm 12/11: 40 slide beamer (36 chính + 4 dự phòng) và <code>report/latex/slide/HOI-DAP-CODE.md</code> (31 câu có <code>file:dòng</code>). Cả hai làm sớm hơn lịch brief (slide 17–18/11).</li>
+<li>Cần Long chốt: <b>tên người ↔ TV</b> (đang chặn), cách khai phần AI viết, phương án chia khối ngoài lõi (mục 7).</li>
+</ul>
+</div>
+</section>
+
+<section id="nhiemvu">
+<h2>1. Bảng nhiệm vụ từng TV</h2>
+<p class="mut">Dòng code tính lại 12/11 từ khoảng dòng ở brief mục 1 (cả dòng trống và chú thích). Số trong brief là ~170–230 nên lệch nhẹ ở TV2, TV3, TV4. <span class="tag v">verified</span> (<code>wc -l</code> và phép cộng khoảng dòng). Phút nói = số từ trong <code>\note</code> chia 125 từ/phút, chưa đo giọng thật. <span class="tag u">unverified</span></p>
+<div class="tbl"><table>
+<thead><tr><th>TV</th><th>Lát CPU</th><th>File và đoạn</th><th>Dòng</th><th>Slide mình nói</th><th>Phút nói</th><th>Báo cáo (mục chủ)</th><th>Vẽ tay được</th><th>Lệnh chạy khi thầy bảo</th></tr></thead>
+<tbody>
+<tr><td><b>TV1</b></td><td>EX và số học</td><td><code>alu.v</code> · <code>muldiv.v</code> · <code>cpu_g1.v:87–106</code> · <code>cpu_pipe.v:129–183</code></td><td>209</td><td>6: 12, 13, 14 (code chia), 21 (<code>div</code>/<code>bcd</code> đóng băng), 32, 33</td><td>5,2</td><td>2.7 (cùng TV4), 3.4, 4.3</td><td>T5: <code>busy</code> đóng băng khi <code>div</code>; bảng chia 7÷2</td><td><code>bash tools/run_unit.sh alu muldiv</code></td></tr>
+<tr><td><b>TV2</b></td><td>Hazard, forwarding, MEM, WB</td><td><code>hazard.v</code> · <code>cpu_pipe.v:112–128, 184–206, 71–84, 260–277</code> · <code>cpu_g1.v:119–147</code></td><td>156</td><td>5: 16, 17, 18 (code forwarding), 28 (E3 bấm nút), 31 (3 lớp kiểm)</td><td>4,5</td><td>2.1, 2.6, 4.1, 4.2, 4.4, PL C</td><td>T1 forwarding, T2 load-use</td><td><code>bash tools/run_unit.sh hazard</code> · <code>python tools/cosim_iss.py --g2 --rand 0</code></td></tr>
+<tr><td><b>TV3</b></td><td>ID và control</td><td><code>control.v</code> · <code>regfile.v</code> · <code>cpu_g1.v:61–86</code> · <code>cpu_pipe.v:85–111, 61–70, 278–290</code></td><td>238</td><td>6: 4, 9, 10, 11 (code <code>lw</code>), 15, 25</td><td>5,0</td><td>1.2, 2.2, 2.4, 2.5 (cùng TV4), 3.1</td><td>bảng chân lý 28 lệnh; <code>G_BYPASS</code></td><td><code>bash tools/run_unit.sh regfile control</code></td></tr>
+<tr><td><b>TV4</b></td><td>IF, PC, nhánh, 2 pha G1, <code>bcd</code></td><td><code>cpu_g1.v:46–60, 148–231</code> · <code>cpu_pipe.v:56–60, 291–304</code> · <code>bcd_unit.v</code></td><td>208</td><td>6: 6, 7 (code 2 pha), 8, 19, 20 (code flush), 29</td><td>5,3</td><td>2.3 (H2), 2.5, 2.6 (nhánh), 2.7, 3.3</td><td>T3: nhánh thật phạt 2; pha A/B của G1</td><td><code>bash tools/run_unit.sh bcd</code> · <code>python tools/cosim_iss.py --rand 0</code></td></tr>
+<tr><td><b>TV5</b></td><td>CP0, ngắt, xung nhịp CPU</td><td><code>irq_ctrl.v</code> · <code>soc_regs.v</code> · <code>cpu_g1.v:107–118</code> · <code>cpu_pipe.v:246–259</code> + dòng ngắt quanh <code>:122, :202</code> · <code>pipeline-policy.md</code> §10</td><td>175 + ~24 dòng tài liệu</td><td>5: 22, 23, 24 (code <code>take_irq</code>), 26 (<code>timebase</code>), 27 (<code>CAL</code>)</td><td>4,2</td><td>2.8 (H5), 3.2, 4.2 (cùng TV2)</td><td>vào/ra ngắt G1 và G2: lệnh nào hủy, <code>EPC</code></td><td><code>bash tools/run_unit.sh irq soc_clock</code></td></tr>
+<tr class="hl"><td><b>Long</b> (một trong 5 TV)</td><td>điều phối + mở/kết</td><td>báo cáo: lời giới thiệu, 1.1, 1.3, 5, PL A, B, TLTK</td><td>—</td><td>7: 1, 2, 3 (cầu nối), 5, 30 (demo), 34, 35; slide 36 cả nhóm</td><td>5,5</td><td>các mục trái</td><td>—</td><td>demo: <code>bash tools/run_unit.sh soc_clock</code>, <code>python tools/screen.py ...</code></td></tr>
+</tbody></table></div>
+<p class="mut">Chỗ giao nhau: <code>cpu_g1.v:172–231</code> có cả cập nhật PC (TV4 giữ chính) lẫn nhận ngắt (TV5 học các dòng ngắt). Lát TV2 và TV5 đều dính <code>stall_busy</code> của TV1: người này trả lời được chỗ nối của người kia.</p>
+<p><b>Cân tải sau khi thêm slide đồng hồ (<span class="tag i">inference</span>, 125 từ/phút, chưa đo):</b> Long 5,5 · TV4 5,3 · TV1 5,2 · TV3 5,0 · TV2 4,5 · TV5 4,2 · cả nhóm 0,8. Tổng 3 794 từ ≈ 30,4 phút. Đã rút 14 câu cuối của lời nói để vừa 30 phút; giữ nguyên các câu trả lời trực tiếp cho 6 câu chắc bị hỏi. TV5 vẫn nhẹ nhất về lời nói nhưng nặng nhất về trả lời hỏi (ngắt chạm mọi lát). Slide dự phòng không tính vào 30 phút.</p>
+</section>
+
+<section id="dokho">
+<h2>2. Độ khó và độ dày</h2>
+<p class="mut"><b>Độ dày</b> = số dòng (<span class="tag v">verified</span>). <b>Độ khó</b> = tổng 5 tiêu chí 1–5 do người dựng chấm (<span class="tag i">inference</span>, không có đề hay barem thầy để chuẩn hóa; sửa điểm ở bảng nếu không đồng ý). Tối đa 25.</p>
+<div class="tbl"><table>
+<thead><tr><th>TV</th><th>Dày<br>(dòng)</th><th>Khái niệm mới</th><th>Bảng chu kỳ tay</th><th>Phụ thuộc lát khác</th><th>Độ xoáy</th><th>Tổng /25</th><th></th></tr></thead>
+<tbody>
+<tr><td>TV1</td><td>3 (209)</td><td>3</td><td>2</td><td>2</td><td>3</td><td><b>13</b></td><td><span class="bar" style="width:52px"></span></td></tr>
+<tr><td>TV2</td><td>2 (156)</td><td>5</td><td>5</td><td>5</td><td>4</td><td><b>21</b></td><td><span class="bar" style="width:84px"></span></td></tr>
+<tr><td>TV3</td><td>5 (238)</td><td>3</td><td>2</td><td>3</td><td>2</td><td><b>15</b></td><td><span class="bar" style="width:60px"></span></td></tr>
+<tr><td>TV4</td><td>4 (208)</td><td>4</td><td>4</td><td>4</td><td>5</td><td><b>21</b></td><td><span class="bar" style="width:84px"></span></td></tr>
+<tr><td>TV5</td><td>3 (175 + 24)</td><td>4</td><td>4</td><td>5</td><td>3</td><td><b>19</b></td><td><span class="bar" style="width:76px"></span></td></tr>
+</tbody></table></div>
+<details open><summary>Vì sao chấm vậy</summary><div><ul>
+<li><b>Khái niệm mới:</b> TV2 phải giữ cùng lúc forwarding, load-use, flush, <code>stall_busy</code>, bypass regfile. TV4: 2 pha vì BRAM, 7 mức <code>next_pc</code>, nhánh ở EX, flush, <code>bcd</code>. TV5: <code>Status/Cause/EPC</code>, ngắt chính xác, <code>cpu_ce</code> và D. TV1 và TV3 ít khái niệm nhưng chi tiết (bù 2, tràn <code>slt</code>; 28 lệnh × 17 tín hiệu).</li>
+<li><b>Bảng chu kỳ tay:</b> TV2 T1 + T2, TV4 T3 + pha A/B, TV5 vào/ra ngắt, TV1 T5 + bảng chia, TV3 không có bảng chu kỳ (chỉ bảng chân lý).</li>
+<li><b>Phụ thuộc:</b> TV2 cần biết <code>busy</code> (TV1), nhánh (TV4), bypass (TV3). TV5 cần biết hủy lệnh ở mọi tầng và chờ <code>div</code>. TV1 và TV3 đứng khá độc lập.</li>
+<li><b>Độ xoáy:</b> trong 6 câu chắc chắn bị hỏi, TV4 giữ 2 (nhánh ở EX, 2 pha), TV1, TV2, TV5 mỗi người 1 (<code>slt</code> tràn · forwarding · ngắt lúc <code>div</code>), TV3 không giữ câu nào, câu "ai viết" cả nhóm.</li>
+<li><b>Dày ≠ khó:</b> TV3 dày nhất vì <code>control.v</code> là bảng dài, nhưng đọc lặp lại một khuôn nên ít xoáy. TV2 mỏng nhất nhưng mỗi dòng nặng.</li>
+</ul></div></details>
+<h3>Gợi ý xếp người (<span class="tag i">inference</span>)</h3>
+<ul>
+<li>Người tư duy mạch tốt nhất vào <b>TV2</b> và <b>TV4</b>. Người ít kinh nghiệm Verilog vào <b>TV1</b> hoặc <b>TV3</b>.</li>
+<li>Long đã nói 5,5 phút và điều phối nên hợp lát ít xoáy: <b>TV3</b> (nhiều dòng nhưng đọc được theo khuôn) hoặc <b>TV1</b>.</li>
+<li>Không có người phụ trách thì lát đó mất cả câu chắc chắn: TV4 nếu bỏ trống là mất 2/6 câu.</li>
+</ul>
+</section>
+
+<section id="kienthuc">
+<h2>3. Kiến thức cần nắm và câu thầy hay hỏi xoáy</h2>
+<p class="mut">Chi tiết lời đáp 3–4 câu và <code>file:dòng</code> từng câu nằm ở <code>report/latex/slide/HOI-DAP-CODE.md</code> (mã B1… F5 dưới đây là mã ở file đó). Nguyên tắc trả lời: chủ lát nói trước, lát kề bổ sung; chưa chắc thì nói "em chưa chắc, em mở code kiểm" rồi mở đúng file.</p>
+
+<details open><summary>Sáu câu chắc chắn bị hỏi (A1–A6)</summary><div><div class="tbl"><table>
+<thead><tr><th>Câu</th><th>Người giữ</th><th>Chỉ vào</th></tr></thead><tbody>
+<tr><td>A1 Vì sao nhánh quyết định ở EX, không ở ID?</td><td>TV4 (+TV2)</td><td><code>cpu_pipe.v:175–178</code>, <code>pipeline-policy.md</code> §5</td></tr>
+<tr><td>A2 Vì sao G1 cần 2 pha?</td><td>TV4</td><td><code>cpu_g1.v:19–21, 58–59, 192, 202, 211</code></td></tr>
+<tr><td>A3 <code>slt</code> khi tràn có đúng không?</td><td>TV1</td><td><code>alu.v:26, 35</code></td></tr>
+<tr><td>A4 Forwarding ưu tiên nguồn nào?</td><td>TV2</td><td><code>hazard.v:46–48, 51–53</code></td></tr>
+<tr><td>A5 Ngắt đến lúc đang <code>div</code> thì sao?</td><td>TV5</td><td><code>cpu_pipe.v:202–204</code>, <code>cpu_g1.v:166</code></td></tr>
+<tr><td>A6 Code này ai viết, em hiểu tới đâu?</td><td>cả nhóm</td><td>phụ lục A, brief mục 0</td></tr>
+</tbody></table></div></div></details>
+
+<details open><summary>TV1 · EX và số học</summary><div>
+<h3>Nền cần có</h3><ul><li>Số bù 2, có dấu và không dấu, dịch bit, phép trừ và tràn.</li><li>Chia tay nhị phân (chia khôi phục).</li><li>Verilog: <code>reg</code> không có nghĩa là ô nhớ; <code>always @*</code> và <code>case</code>; <code>assign</code>.</li></ul>
+<h3>Phải nói được</h3><ul><li>ALU 8 phép chọn bằng <code>ctl</code> qua MUX (<code>alu.v:17–39</code>).</li><li><code>slt</code> đúng khi tràn: nhìn bit dấu hai số trước, rồi mới nhìn dấu của hiệu (<code>alu.v:26</code>), ví dụ <code>a = 0, b = 0x80000000</code>: đúng là <code>0 &lt; b</code> sai (b âm), nhưng chỉ nhìn bit dấu của hiệu sẽ ra 1.</li><li>Chia khôi phục: 1 chu kỳ bắt đầu + 32 bước = 33 chu kỳ; chia 0 xong ngay, <code>LO=0, HI=a, DZ=1</code> (<code>muldiv.v:50, 54, 64–66</code>).</li><li><code>div</code> <b>có dấu</b>: <code>−7/2</code> → LO=−3, HI=−1; <code>0x80000000/−1</code> → LO=0x80000000, HI=0 (<code>isa-spec.md</code> §4, <code>muldiv.v:74–75, 84–85</code>). <span class="tag i">Câu này HOI-DAP chưa có</span>: nên thêm.</li><li>Vì sao CPI G2 lớn hơn G1 mà vẫn nhanh hơn: thời gian = lệnh × CPI / tần số; 25 MHz so 50 MHz.</li></ul>
+<h3>Câu xoáy</h3><ul><li>B1 ALU làm phép gì · B2 <code>y</code> khai <code>reg</code> có ô nhớ không · B3 chia mất mấy chu kỳ · B4 chia 0 · B5 toán hạng ALU ở G2 lấy từ đâu.</li><li>Dễ bị dí: <code>0x80000000 / −1</code>; <code>div</code> mất bao nhiêu chu kỳ; thiếu bước nào thì <code>busy</code> sai.</li></ul>
+<h3>Phải vẽ và chạy</h3><ul><li>Bảng chia 7÷2 từng bước; T5 (<code>busy</code> đóng băng).</li><li><code>bash tools/run_unit.sh alu muldiv</code>; cài lỗi <code>lt = diff[31]</code> thì <code>alu_tb</code> báo FAIL ở ca <code>ctl=5 a=0 b=80000000</code>.</li></ul></div></details>
+
+<details><summary>TV2 · Hazard, forwarding, MEM, WB</summary><div>
+<h3>Nền cần có</h3><ul><li>5 tầng và thanh ghi giữa tầng; vì sao pipeline nhanh hơn.</li><li>Ba loại hazard: cấu trúc, dữ liệu, điều khiển (Nhóm 3 cũng dạy đủ ba loại).</li></ul>
+<h3>Phải nói được</h3><ul><li>Điều kiện forwarding: lệnh sau có ghi, đích khác <code>$zero</code>, trùng nguồn; ưu tiên EX/MEM (10) trước MEM/WB (01) (<code>hazard.v:46–48</code>).</li><li>Load-use dừng đúng 1 chu kỳ vì <code>lw</code> chỉ có dữ liệu cuối MEM; chỉ dừng khi lệnh sau dùng <code>rs/rt</code> trùng (<code>hazard.v:39–40</code>).</li><li><code>flush</code> ở <code>hazard.v:41</code> chỉ là dây không điều khiển gì ở <code>cpu_pipe.v</code>; bong bóng thật tạo bằng <code>id_ok</code> (<code>cpu_pipe.v:205, 279</code>). Nói thật nếu bị hỏi.</li><li>Thứ tự ưu tiên: busy &gt; flush &gt; load-use.</li><li>9 chương trình hazard trong <code>fw/tests/hazard/</code>, số bong bóng khớp ISS.</li></ul>
+<h3>Câu xoáy</h3><ul><li>C1 điều kiện forwarding · C2 load-use · C3 <code>flush</code> dùng làm gì · C4 MEM/WB ghi cùng lúc ID đọc · C5 <code>lw/sw</code> chạm bus ở tầng nào.</li><li>Dễ bị dí: bắt vẽ bảng chu kỳ <code>lw</code> rồi dùng ngay; CPI 2,027 so 1,428.</li></ul>
+<h3>Phải vẽ và chạy</h3><ul><li>T1, T2 tay; trace thật của <code>hazard</code> test.</li><li><code>bash tools/run_unit.sh hazard</code>; cài lỗi bỏ <code>dst != 0</code> thì test <code>zero_reg</code> bắt.</li></ul></div></details>
+
+<details><summary>TV3 · ID và control</summary><div>
+<h3>Nền cần có</h3><ul><li>3 dạng lệnh MIPS (R, I, J), mở rộng dấu và không dấu, bảng chân lý.</li><li>Verilog: <code>parameter</code>, <code>#( .G_BYPASS(...) )</code>, ghép bit <code>{}</code>.</li></ul>
+<h3>Phải nói được</h3><ul><li>Chọn một lệnh, nói nó bật tín hiệu nào: <code>lw</code> bật <code>alu_src, mem_read, mem_to_reg, reg_write</code> (<code>control.v:87</code>).</li><li>Regfile đọc tổ hợp, ghi theo clock; <code>$0</code> có hai lớp chặn: lúc ghi (<code>regfile.v:33</code>) và lúc đọc (<code>:45–46</code>).</li><li><code>G_BYPASS</code>: G2 = 1 vì WB ghi lúc ID đọc, G1 = 0 vì ghi ở pha A (<code>cpu_pipe.v:109</code>, <code>cpu_g1.v:84</code>).</li><li><code>imm</code> ba kiểu: không dấu, <code>lui</code>, mở rộng dấu (<code>cpu_g1.v:76–77</code>); <code>uses_rs/uses_rt</code> để hazard khỏi dừng oan.</li></ul>
+<h3>Câu xoáy</h3><ul><li>D1 một lệnh bật tín hiệu nào · D2 <code>$zero</code> · D3 đọc tổ hợp ghi theo clock · D4 immediate · D5 <code>uses_rs/uses_rt</code>.</li><li>Dễ bị dí: bỏ <code>wa != 0</code> thì test vẫn PASS (lỗi tương đương, phải bỏ cả hai lớp).</li></ul>
+<h3>Phải vẽ và chạy</h3><ul><li>Bảng chân lý 28 lệnh (nhớ cấu trúc, đọc được 1 dòng); sơ đồ regfile hai cổng đọc một cổng ghi.</li><li><code>bash tools/run_unit.sh regfile control</code>.</li></ul></div></details>
+
+<details><summary>TV4 · IF, PC, nhánh, 2 pha G1, <code>bcd</code></summary><div>
+<h3>Nền cần có</h3><ul><li>BRAM đọc đồng bộ: địa chỉ chốt ở một cạnh, dữ liệu có ở cạnh sau.</li><li>Dự đoán không nhảy; phạt khi nhảy thật.</li><li>BCD và double dabble (dịch rồi cộng 3 khi chữ số ≥ 5).</li></ul>
+<h3>Phải nói được</h3><ul><li>2 pha: B làm bộ nhớ dữ liệu và ngoại vi, A cập nhật PC/regfile/CP0 và chốt lệnh kế (<code>cpu_g1.v:19–21, 202, 211</code>); <code>phb</code> reset = 1.</li><li><code>next_pc</code> 7 mức ưu tiên (<code>cpu_g1.v:154–161</code>); ngắt đè bằng <code>pc_new = 0x180</code> (<code>:167</code>).</li><li>Nhánh ở EX phạt 2, lý do: dùng lại forwarding; so với mẫu ở ID phạt 1 (<code>pipeline-policy.md</code> §5).</li><li><code>bcd</code>: 28 chu kỳ bản tuần tự, bản tổ hợp 27 tầng; quá 99 999 999 thì <code>y = FFFFFFFF</code> (<code>bcd_unit.v:7–10, 55–57, 68–70</code>).</li></ul>
+<h3>Câu xoáy</h3><ul><li>E1 PC 7 mức · E2 <code>phb</code> đổi ở hai chỗ · E3 PC khi <code>div</code> chạy · E4 <code>bcd</code> · E5 nạp PC và hủy lệnh nhầm ở G2.</li><li>Dễ bị dí: vì sao IMEM chốt <code>next_pc</code> thay vì PC; nhánh ở EX đổi gì lấy gì.</li></ul>
+<h3>Phải vẽ và chạy</h3><ul><li>T3 (nhánh thật phạt 2); H2 đường đi <code>lw</code> qua pha A/B.</li><li><code>bash tools/run_unit.sh bcd</code> · <code>python tools/cosim_iss.py --rand 0</code>.</li></ul></div></details>
+
+<details><summary>TV5 · CP0, ngắt, xung nhịp CPU</summary><div>
+<h3>Nền cần có</h3><ul><li>Ngắt, địa chỉ vector, lưu chỗ quay về, mask (<code>IE</code>), cờ lồng (<code>EXL</code>).</li><li>Clock enable: CPU không có clock riêng, chỉ được phép bước.</li></ul>
+<h3>Phải nói được</h3><ul><li><code>take_irq</code>: G1 năm vế (<code>cpu_g1.v:166</code>), G2 thêm load-use, <code>stall_busy</code>, CP0 ở tầng sau (<code>cpu_pipe.v:202–204</code>).</li><li>EPC: G1 lệnh kế tiếp (<code>:221</code>); G2 lệnh cũ nhất chưa xong (<code>cpu_pipe.v:122</code>). G2 hủy 2 lệnh (ID, ID/EX), cho 2 lệnh chạy nốt, chờ <code>div</code> xong.</li><li><code>eret</code>: PC ← EPC, <code>EXL</code> ← 0. <code>Status=$12, Cause=$13, EPC=$14</code>.</li><li><code>cpu_ce</code>: xung mỗi D/2 hoặc D chu kỳ, G1 cần D chẵn ≥ 2 nên 25 MHz, G2 D=1 nên 50 MHz (<code>soc_regs.v:45–48, 53, 65–66</code>).</li></ul>
+<h3>Câu xoáy</h3><ul><li>F1 điều kiện nhận ngắt · F2 EPC · F3 <code>eret</code> · F4 <code>irq_ctrl</code> pending/enable · F5 "CPU clock" là gì.</li><li>Dễ bị dí: ngắt đến lúc đang <code>div</code>; nạp giờ lúc ngắt; nhận ngắt ngay sau <code>mtc0</code> có được không.</li></ul>
+<h3>Phải vẽ và chạy</h3><ul><li>Bảng vào/ra ngắt G1 và G2 (5 tình huống ở <code>pipeline-policy.md</code> §10).</li><li><code>bash tools/run_unit.sh irq soc_clock</code>; đột biến M7–M9 bị cosim bắt.</li></ul></div></details>
+<p class="mut">Ghi chú nguồn (<span class="tag v">verified</span>): <code>flush</code> dùng ở <code>cpu_pipe.v</code> chỉ 3 dòng (115, 127, 302). Brief ghi "bốn vế" cho <code>take_irq</code>, code G1 có năm.</p>
+</section>
+
+<section id="bohoc">
+<h2>4. Plan làm bộ học tập cho từng thành viên</h2>
+<h3>Trạng thái 12/11 (<span class="tag v">verified</span>)</h3>
+<div class="tbl"><table><thead><tr><th>Món</th><th>Ai đọc</th><th>Trạng thái</th><th>Ghi chú</th></tr></thead><tbody>
+<tr><td>V0 Đọc Verilog trong một buổi</td><td>cả nhóm</td><td class="hl">xong, <code>nguon/02-code.md</code></td><td>file hiện 412 dòng; worklog ghi 285: chưa rõ vì sao lệch</td></tr>
+<tr><td>HOI-DAP-CODE.md (31 câu)</td><td>cả nhóm</td><td class="hl">xong, nằm ở <code>report/latex/slide/</code></td><td>làm từ V0 + code; thêm B6, C6, F6 ngày 12/11 (chưa đối chiếu từng câu với bài P)</td></tr>
+<tr><td>P1 · P2 · P3 · P4 · P5</td><td>TV1…TV5</td><td class="hl">đã có bản nguồn (301–347 dòng mỗi bài)</td><td>8 MCQ, vấn đáp, bài cài lỗi có kết quả chạy thật, bảng chu kỳ tay, "Thầy chỉ vào dòng này"; mỗi bài có <code>kiem/P*.py</code> PASS</td></tr>
+<tr><td>C0 Một lệnh đi qua 5 người</td><td>cả nhóm</td><td class="hl">đã có bản nguồn (301 dòng)</td><td>15 câu chéo, 5 MCQ; chạy thật chương trình sw/lw/beq trên G2 (retire ở chu kỳ 4, 5, 7, 10)</td></tr>
+<tr><td>U1 Đồng hồ trong 15 phút</td><td>cả nhóm</td><td class="hl">đã có bản nguồn (239 dòng)</td><td>5 khối × 3 phút theo đường đi của một mili giây; cắt đầu tiên nếu trễ</td></tr>
+<tr><td>Slide beamer + ghi chú nói</td><td>cả nhóm</td><td class="hl">bản nháp xong (40 slide, 3 794 từ cho 36 slide chính)</td><td>còn ô <code>\cho{}</code> ở bìa, chưa bấm giờ</td></tr>
+<tr><td>Báo cáo LaTeX</td><td>—</td><td>R1 xong (32 trang)</td><td>R2, R3 chưa viết</td></tr>
+</tbody></table></div>
+
+<h3>Mỗi người học lát mình theo 5 bước (một vòng khoảng 1 ngày, lặp cho đến khi qua cổng)</h3>
+<ol>
+<li><b>Đọc V0</b> (cả nhóm, một buổi) để đọc được Verilog: <code>wire/reg</code>, <code>assign</code>, <code>always</code>, <code>=</code> và <code>&lt;=</code>.</li>
+<li><b>Đọc bài P của mình</b> rồi mở <code>src/</code> đối chiếu từng đoạn. Không đọc mô tả mà không mở code.</li>
+<li><b>Chạy lệnh test của lát</b> và <b>cài 1 lỗi</b> trên bản chép ngoài <code>src/</code> (<code>work/mut/</code>), xem test nào bắt và dòng báo lỗi trông thế nào.</li>
+<li><b>Vẽ bảng chu kỳ trên giấy trắng</b> (không nhìn đáp án), rồi so với <code>pipeline-policy.md</code> §7.</li>
+<li><b>Dạy lại cho người lát kề</b> (TV1↔TV2↔TV3↔TV4↔TV5 theo đường đi của lệnh): nói bằng lời mình, chỉ được dòng code. Người nghe hỏi 3 câu chéo.</li>
+</ol>
+<h3>Cổng qua lát (mỗi người tự tick; chưa đủ thì chưa sang bước sau)</h3>
+<div class="card"><ul style="list-style:none;margin-left:0">
+<li><label><input type="checkbox"> Đọc được từng dòng lát mình và nói dòng đó sinh ra phần cứng gì (dây, MUX, ô nhớ).</label></li>
+<li><label><input type="checkbox"> Chạy được lệnh test của lát, đọc ra đúng dòng <code>PASS</code> kèm số ca (không nhầm với <code>$finish called</code>).</label></li>
+<li><label><input type="checkbox"> Cài 1 lỗi, nói test nào bắt, dòng báo lỗi trông thế nào.</label></li>
+<li><label><input type="checkbox"> Vẽ tay không nhìn đáp án đúng bảng chu kỳ của lát.</label></li>
+<li><label><input type="checkbox"> Trả lời đúng 5/5 câu của lát trong <code>HOI-DAP-CODE.md</code>, mở đúng <code>file:dòng</code> trong 5 giây.</label></li>
+<li><label><input type="checkbox"> Trả lời ≥ 3/5 câu chéo của lát kề (C0, khi có).</label></li>
+<li><label><input type="checkbox"> Trả lời được A1–A6, nhất là A6 "ai viết, em hiểu tới đâu" bằng lời thật.</label></li>
+</ul></div>
+
+<h3>Lịch 12–25/11</h3>
+<div class="tbl"><table><thead><tr><th>Ngày</th><th>Dựng (người dựng)</th><th>Mỗi thành viên</th><th>Soát</th></tr></thead><tbody>
+<tr><td>12/11</td><td>V0 ✓, HOI-DAP ✓, slide nháp ✓, R1 ✓</td><td><b>Long chốt tên ↔ TV</b></td><td>—</td></tr>
+<tr><td>13/11</td><td>P1, P2 · R1 soát</td><td>đọc V0; chạy <code>run_unit.sh</code> lát mình</td><td>soát V0</td></tr>
+<tr><td>14/11</td><td>P3, P4 · R2</td><td>đọc bài P của mình</td><td>soát P1 làm mẫu</td></tr>
+<tr><td>15/11</td><td>P5, C0, U1 · R3</td><td>đọc bài P của mình</td><td>soát R1</td></tr>
+<tr class="hl"><td>16/11 (CN)</td><td>—</td><td><b>Cổng 1</b>: đọc code lát mình từng dòng cho nhóm nghe, chạy test, cài 1 lỗi</td><td>—</td></tr>
+<tr><td>17–18/11</td><td>sửa slide theo soát; đồng bộ HOI-DAP với "Thầy chỉ vào dòng này" của P</td><td>viết lại 1 đoạn báo cáo lát mình bằng lời mình (tiêu chí C7)</td><td>soát R2, R3</td></tr>
+<tr><td>19/11</td><td>soát nhất quán số lệnh, tên tín hiệu, số</td><td>chụp H8 (GTKWave), điền bìa, phụ lục A, B</td><td>soát slide</td></tr>
+<tr class="hl"><td>20/11</td><td>sửa theo soát</td><td><b>Cổng 2</b>: 15 câu chéo + tổng duyệt slide có bấm giờ</td><td>—</td></tr>
+<tr><td>21–23/11</td><td>—</td><td>nhường Kho (thuyết trình 23/11)</td><td>—</td></tr>
+<tr><td>24/11</td><td>—</td><td>tổng duyệt lần 2, in báo cáo</td><td>soát cuối</td></tr>
+<tr class="hl"><td>25/11</td><td>—</td><td><b>bảo vệ</b></td><td>—</td></tr>
+</tbody></table></div>
+<p class="mut">Lịch lấy từ brief mục 5. Cắt khi trễ theo thứ tự: U1 → phụ lục D rút còn bảng liệt kê → slide dự phòng. <b>Không cắt</b> P1–P5, chương 2, chương 4.</p>
+
+<h3>Điểm cần để mắt (<span class="tag i">inference</span>)</h3>
+<ul>
+<li><b>Đường găng là 13–15/11:</b> 5 bài P dày ≥ 300 dòng + mỗi bài kiểm máy. Nếu P chỉ ra kịp một phần thì ưu tiên theo độ khó mục 2: P2 và P4 trước, rồi P5, P3, P1.</li>
+<li><b>Cổng 1 (16/11)</b> chỉ cách ngày P5 một ngày: người TV5 đọc bài mình ngay sát cổng. Cân nhắc dịch P5 lên 14/11.</li>
+<li>Các cổng cũ (14/11, 21/11, 05/12) và lịch K4–K6 <b>chưa xếp lại</b> theo mốc 25/11 (<code>.ai/state.md</code>): không dùng.</li>
+<li>Khi P ra, cập nhật <code>HOI-DAP-CODE.md</code> (đang lấy từ V0) để khớp "Thầy chỉ vào dòng này".</li>
+</ul>
+
+<h3>Prompt dán sẵn</h3>
+<p class="mut">Chạy từ <code>hoc-tap/ktmt-2026-1-casio</code>. Mỗi prompt một phiên. Nguồn: brief mục 6.</p>
+<div id="prompts"></div>
+</section>
+
+<section id="ngoailoi">
+<h2>5. Phần không thuộc lõi môn: ai thuyết trình, ai chịu trách nhiệm</h2>
+<p class="mut">Brief mục 0: UART/sync, VGA, <code>CAL</code>, DSE, E1′–E4′ xuống phụ lục D; "làm nhiều, nói ít, nói chắc". Phụ lục D <b>không có chủ</b> (brief mục 1). Cột "Chủ trả lời" dưới đây: 5 khối đã có chủ trong brief mục 1 giữ nguyên; các khối mồ côi tôi xếp theo vai cũ ở <code>PLAN.md</code> §5.2 và cân tải. <span class="tag i">đề xuất</span>, Long chốt.</p>
+<div class="tbl"><table>
+<thead><tr><th>Khối</th><th>File (dòng)</th><th>Xuất hiện ở</th><th>Thuyết trình</th><th>Chủ trả lời</th><th>Nguồn gán</th></tr></thead><tbody>
+<tr><td>Firmware 5 chế độ, <code>fmt.s</code></td><td><code>fw/main.s</code> (1 230), <code>fw/fmt.s</code> (176)</td><td>báo cáo 3.4; slide 30 demo (Long)</td><td>Long chạy demo; TV1 1–2 phút</td><td><b>TV1</b></td><td>brief mục 1</td></tr>
+<tr><td>DSE LUT/FF (Yosys), CPI</td><td><code>tools/dse_report.py</code> (94), <code>tools/cpi.py</code> (118)</td><td>slide 32, 33; dự phòng 2</td><td>TV1</td><td><b>TV1</b></td><td>brief mục 3 (slide 23)</td></tr>
+<tr><td>Assembler, ISS</td><td><code>tools/asm.py</code> (404), <code>tools/iss.py</code> (468)</td><td>báo cáo 2.1, 4.1</td><td>không</td><td><b>TV2</b></td><td>PLAN A3</td></tr>
+<tr><td>Co-sim, MARS, đột biến</td><td><code>tools/cosim_iss.py</code> (209), <code>cmp_trace.py</code> (81), <code>cosim_mars.py</code> (313)</td><td>slide 31; báo cáo 4.1</td><td>TV2</td><td><b>TV2</b></td><td>brief mục 1</td></tr>
+<tr><td>UART 8N1, sync giờ</td><td><code>src/uart.v</code> (136), câu <code>$T</code> trong <code>main.s</code></td><td>phụ lục D</td><td>không</td><td><b>TV2</b> <span class="tag i">đề xuất</span></td><td>mồ côi; PLAN B5 ghi TV2 + TV5</td></tr>
+<tr><td>SoC top, bản đồ MMIO, <code>system_tb</code></td><td><code>src/soc_top.v</code> (146), <code>docs/mmio-map.md</code></td><td>slide 25; báo cáo 3.1</td><td>TV3</td><td><b>TV3</b></td><td>brief mục 1</td></tr>
+<tr><td>Quét 7 đoạn, điều khiển hiển thị</td><td><code>seg7_scan.v</code> (102), <code>display_ctrl.v</code> (77)</td><td>slide 29; báo cáo 3.3</td><td>TV4</td><td><b>TV4</b></td><td>brief mục 1</td></tr>
+<tr><td>VGA, bảng chữ</td><td><code>vga_digits.v</code> (107), <code>char_rom.v</code> (45)</td><td>phụ lục D</td><td>không</td><td><b>TV4</b> <span class="tag i">đề xuất</span></td><td>mồ côi; PLAN A5 (hiển thị) TV4</td></tr>
+<tr><td>Còi, bóng ma (E4′)</td><td><code>beeper.v</code> (73), <code>tools/exp_e4.py</code> (47)</td><td>phụ lục D</td><td>không</td><td><b>TV4</b> <span class="tag i">đề xuất</span></td><td>mồ côi; PLAN A5</td></tr>
+<tr><td><code>timebase</code>, <code>CAL</code>, E1′</td><td><code>timebase.v</code> (58), <code>tools/exp_cal.py</code> (51)</td><td>slide 26, 27 (<code>CAL</code>); báo cáo 3.2</td><td>TV5</td><td><b>TV5</b></td><td>brief mục 1, PLAN A4</td></tr>
+<tr><td>RTC, bấm giờ, hẹn giờ, báo thức</td><td><code>timers.v</code> (353), <code>rtc_bcd.v</code> (69)</td><td>báo cáo 3.2</td><td>TV5</td><td><b>TV5</b></td><td>brief mục 1</td></tr>
+<tr><td>Nút bấm chống rung</td><td><code>buttons.v</code> (120)</td><td>phụ lục D</td><td>không</td><td><b>TV5</b> <span class="tag i">đề xuất</span></td><td>mồ côi; PLAN B4</td></tr>
+<tr><td>E3: polling / ngắt / capture</td><td><code>tools/exp_e3.py</code> (61)</td><td>slide 28; báo cáo 3.5 (mới)</td><td>TV2</td><td><b>TV2</b> <span class="tag i">đề xuất</span></td><td>mồ côi; chuyển từ TV5 sang TV2 vì là thí nghiệm của bộ kiểm thử, và để cân tải lời nói</td></tr>
+</tbody></table></div>
+<div class="card">
+<b>Số khối ngoài lõi mỗi người cầm (theo đề xuất):</b> TV1 2 · TV2 4 (assembler/ISS, co-sim, UART, E3) · TV3 1 · TV4 3 · TV5 3 (RTC/bấm giờ, <code>timebase</code>/<code>CAL</code>, nút bấm).
+Đọc kèm mục 2: TV3 nặng lõi, nhẹ ngoài lõi; TV2 và TV5 ngược lại. <span class="tag i">inference</span>: số dòng không dùng để cân vì các khối này chỉ cần nói 1 câu mở đầu và 1 con số; nếu TV2 hay TV5 quá tải, chuyển nút bấm hoặc UART sang TV3 vì TV3 chỉ có 1 khối.
+</div>
+<h3>Quy tắc trả lời cho khối ngoài lõi</h3>
+<ul>
+<li>Chủ khối nói 1 câu "khối này làm gì" + 1 con số lấy từ sổ số (vd <code>CAL</code>: 1 ppm = 3 276,8 đơn vị; +20 ppm ra 65 500; +250 ppm bị từ chối).</li>
+<li>Hỏi sâu hơn: nói thật "đây là phần mở rộng, có AI hỗ trợ, đã khai ở phụ lục A", rồi mở đúng file. Không đoán.</li>
+<li>Khối không có slide chính (UART, VGA, còi, nút bấm): không đưa vào 30 phút nói; chỉ dùng slide dự phòng khi thầy hỏi. <code>CAL</code> và E3 đã lên slide chính từ 12/11.</li>
+<li>Câu phải nói rõ (brief mục 2): chỉ mô phỏng; <code>G_N = 50</code> nén 1 ms; LUT/FF là Yosys; G2 chỉ chạy hồi quy, demo là G1.</li>
+</ul>
+</section>
+
+<section id="mau">
+<h2>6. So với bài nhóm mẫu (Nhóm 3, 2025.1)</h2>
+<p class="mut">Nguồn: <code>report/doi-chieu-nhom3.md</code> và <code>PLAN.md</code> §5.4. File PDF mẫu không có trong repo và tôi chưa mở lại. Các ô về mẫu là đọc lại từ hai file ghi chú. Nhóm 3 được cho là điểm cao theo lời Long, chưa có barem để kiểm. <span class="tag u">unverified</span> cho mọi so sánh điểm số.</p>
+<div class="tbl"><table>
+<thead><tr><th>Mảng</th><th>Nhóm 3</th><th>Nhóm mình</th><th>TV</th><th>Hệ quả chuẩn bị</th></tr></thead><tbody>
+<tr><td>Tập lệnh, bảng control</td><td>14 lệnh, bảng 6 dòng</td><td>28 lệnh, 17 tín hiệu</td><td>TV3</td><td>Gấp đôi mẫu: thầy có thể hỏi bất kỳ lệnh nào trong 28.</td></tr>
+<tr><td>Số học</td><td>không có <code>div</code>, <code>bcd</code></td><td><code>mul</code>, <code>div</code> 33 chu kỳ có dấu, <code>bcd</code></td><td>TV1</td><td>Vượt mẫu: không có tiền lệ câu hỏi, tự chuẩn bị <code>0x80000000/−1</code>, chia 0.</td></tr>
+<tr><td>Hazard, forwarding</td><td>có, đủ ba loại hazard</td><td>có, 9 bài test, so ISS</td><td>TV2</td><td><b>Ngang mẫu = thầy quen hỏi nhất.</b> Ưu tiên cho TV2.</td></tr>
+<tr><td>Nhánh</td><td>quyết định ở ID, phạt 1</td><td>ở EX, phạt 2</td><td>TV4 (+TV2)</td><td>Mình kém ở đây. Phải nói "đổi gì lấy gì" (slide 20 flush; dự phòng 1).</td></tr>
+<tr><td>Lõi</td><td>1 pipeline 5 tầng</td><td>G1 (2 pha, 25 MHz) + G2 (50 MHz)</td><td>TV4 (G1), TV3 (cả hai)</td><td>Có baseline, nhưng thêm chuyện "vì sao 2 pha" (BRAM).</td></tr>
+<tr><td>Ngắt</td><td>ghi là hạn chế</td><td>có ở G1 và G2, ngắt chính xác</td><td>TV5</td><td>Vượt mẫu. Không có tiền lệ, nên A5 phải chắc.</td></tr>
+<tr><td>Kiểm thử</td><td>1 chương trình (tổng 1..10), dò waveform bằng mắt</td><td>co-sim ISS, MARS, 9 test hazard, <code>system_tb</code> 589 kiểm</td><td>TV2</td><td>Vượt. Phải nói được "ISS sai thì ai bắt: MARS".</td></tr>
+<tr><td>Số chu kỳ, CPI</td><td>"≈ 55" bằng mắt; bảng CPI lý thuyết so thực tế</td><td><code>CYCLE_COUNT</code> phần cứng; CPI 1,428 / 2,027, ×1,21 / ×1,34 / ×1,39</td><td>TV1</td><td>PLAN C2 ghi "CPI nhóm trước 1,34" (đọc lại gián tiếp). Mình CPI cao do nhánh và <code>busy</code>.</td></tr>
+<tr><td>Hình</td><td>cắt từ sách P&amp;H (hình ID thiếu bộ so nhánh)</td><td>TikZ tự vẽ, grep tên tín hiệu; mới có H2</td><td>mọi TV</td><td>Mỗi tên tín hiệu trên hình phải grep được trong <code>src/</code>. H1, H3, H4, H5 chưa vẽ.</td></tr>
+<tr><td>Phần ứng dụng</td><td>không có</td><td>SoC đồng hồ (chương 3, 12 trang) + slide 3, 25–28 nối đồng hồ với CPU</td><td>TV5 (<code>CAL</code>), TV2 (E3), TV3, TV4, Long</td><td>Vượt mẫu và đúng đề đăng ký. Barem chưa biết (<code>docs/de-bai.md</code> câu 5 trống): nên hỏi thầy.</td></tr>
+<tr><td>Trang, phụ lục</td><td>59 trang, phụ lục A, B, C</td><td>mục tiêu ~65 trang; phụ lục A–D; hiện 32</td><td>Long</td><td>Còn thiếu chương 3–5 và H1, H3–H5.</td></tr>
+<tr><td>Phân công, vấn đáp</td><td>phụ lục A phân công</td><td>21 gói ghi "Claude viết"; bảng nhận việc trống</td><td>mọi TV</td><td><b>Rủi ro lớn nhất:</b> thầy dí code. A6 phải trả lời thật.</td></tr>
+</tbody></table></div>
+<ul>
+<li><b>Kết luận ngắn (<span class="tag i">inference</span>):</b> vượt mẫu ở độ rộng (lệnh, lõi, ngắt, kiểm thử, ứng dụng). Ngang mẫu ở hazard/forwarding/pipeline cơ bản, đó là chỗ thầy sẽ hỏi chắc. Kém mẫu ở nhánh (phạt 2 so với 1) và mức hoàn thiện báo cáo hiện tại (32/59 trang).</li>
+<li>Điều so không thẳng được: CPI và số lệnh (khác chương trình, khác tập lệnh).</li>
+</ul>
+</section>
+
+<section id="chot">
+<h2>7. Việc Long chốt, và rủi ro chưa ai hỏi</h2>
+<div class="card"><ol>
+<li><b>Tên người ↔ TV1–TV5</b> (<code>docs/hop-tuan.md</code> còn trống). Đang chặn: bìa slide còn <code>\cho{}</code>, bài P cần biết người đọc.</li>
+<li><b>Chia khối ngoài lõi:</b> dùng đề xuất mục 5 hay giữ nguyên "phụ lục D không có chủ"?</li>
+<li><b>Hỏi thầy tỷ trọng CPU / ứng dụng</b> (câu 1 và 5 của <code>docs/de-bai.md</code> còn trống) và thầy vấn đáp theo lát hay theo cả hệ thống. Phương án B là bảo hiểm cho cả hai đáp án.</li>
+<li><b>Cân thời lượng nói:</b> TV5 4,2 phút, Long 5,5 phút (ước tính 125 từ/phút, chưa đo).</li>
+<li><b>Cách khai phần AI viết</b> ở phụ lục A (brief mục 1).</li>
+<li><b>Số người:</b> brief ghi 5 người cho 5 lát và Long là một TV; PLAN §7 ghi "số thành viên chưa chốt". Nếu khác 5, mọi bảng trên đổi.</li>
+</ol></div>
+<h3>Dấu vết ba vòng cho trang này</h3>
+<ul>
+<li><b>V1:</b> dựng từ brief mục 1–5, PLAN §5, <code>doi-chieu-nhom3.md</code>, <code>HOI-DAP-CODE.md</code>, số dòng đếm lại.</li>
+<li><b>V2 (sai ở đâu / đơn vị, index):</b> số dòng lát lệch brief nhẹ (TV2 156 so ~170, TV3 238 so ~220, TV4 208 so ~230) vì brief làm tròn: ghi cả hai, tin số đếm. Điểm khó là chấm tay, không phải đo: ghi rõ <span class="tag i">inference</span>. Phát hiện thêm: HOI-DAP chưa có câu "div có dấu / <code>0x80000000/−1</code>" (<code>muldiv.v:74–85</code>, <code>isa-spec.md</code> §4): đã ghi vào TV1 mục 3.</li>
+<li><b>V3 (câu chưa ai hỏi):</b> (a) điểm khó 25 thang là của người dựng, không phải của thầy; hai người khác nhau có thể xếp TV3 và TV5 ngược; (b) giả định số thành viên = 5; (c) "chủ trả lời" khối mồ côi là đề xuất, chưa ai nhận; (d) nút bấm và E3 gán TV5 làm TV5 nặng nhất ngoài lõi; (e) chưa mở PDF Nhóm 3 nên mọi "mẫu có gì" là gián tiếp.</li>
+</ul>
+<p class="mut">Trang này chứng minh: ai giữ file nào, bao nhiêu dòng, câu nào chắc bị hỏi, khối nào chưa có chủ. Chưa chứng minh: độ khó theo thầy, thời lượng nói thật, việc P1–P5 ra kịp 15/11.</p>
+</section>
+</main>
+<script>
+(function(){
+var root=document.documentElement;
+try{var t=localStorage.getItem('theme');if(t)root.setAttribute('data-theme',t)}catch(e){}
+document.getElementById('theme').onclick=function(){
+  var dark=root.getAttribute('data-theme')==='dark'||(!root.getAttribute('data-theme')&&matchMedia('(prefers-color-scheme: dark)').matches);
+  var n=dark?'light':'dark';root.setAttribute('data-theme',n);try{localStorage.setItem('theme',n)}catch(e){}
+};
+var bo=['Đọc .ai/state.md, đuôi .ai/worklog.md, report/BRIEF-25-11.md mục 0, 1, 4, rồi learn/on-tap-btl/PLAN.md mục 3, 4, 5.1, 6, 9.',
+'Đọc bài A2 trong learn/on-tap-btl/nguon/01-khoi-a.md để lấy giọng văn. Người đọc chưa biết Verilog.',
+'Viết bài @@ vào learn/on-tap-btl/nguon/02-code.md theo brief mục 4. Grep lại số dòng của lát trước khi trích. Đọc hết code của lát trước khi viết.',
+'Số chỉ qua {{so:}}. Mỗi câu hỏi có lời giải ngay trong bài. Không đưa tên plan, tên model, chữ dạy vào bài.',
+'Chỉ ghi trong learn/on-tap-btl/ và .ai/. Không sửa src/ fw/ tb/ tools/ docs/ report/. Không commit.',
+'Chạy đủ nghiệm thu ở brief mục 4, dán output nguyên văn, append worklog, sửa state. Dừng.'].join('\n');
+var items=[['P1 · EX và số học (TV1)','P1'],['P2 · Hazard, forwarding, MEM, WB (TV2)','P2'],['P3 · ID và control (TV3)','P3'],['P4 · IF, PC, nhánh, 2 pha, bcd (TV4)','P4'],['P5 · CP0, ngắt, cpu_ce (TV5)','P5'],['C0 và U1 · một lệnh đi qua 5 người; đồng hồ trong 15 phút (cả nhóm)','C0 và U1']];
+var out=document.getElementById('prompts');
+items.forEach(function(it){
+  var txt=bo.replace('@@',it[1]);
+  var d=document.createElement('details');
+  var s=document.createElement('summary');s.textContent=it[0];d.appendChild(s);
+  var w=document.createElement('div');
+  var b=document.createElement('button');b.type='button';b.textContent='Chép';
+  var p=document.createElement('pre');p.textContent=txt;
+  b.onclick=function(){
+    var done=function(){b.textContent='Đã chép';setTimeout(function(){b.textContent='Chép'},1500)};
+    if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(txt).then(done,function(){sel()})}else{sel()}
+    function sel(){var r=document.createRange();r.selectNodeContents(p);var g=getSelection();g.removeAllRanges();g.addRange(r);try{document.execCommand('copy');done()}catch(e){}}
+  };
+  w.appendChild(b);w.appendChild(p);d.appendChild(w);out.appendChild(d);
+});
+var soat='Soát phiên <tên> theo report/BRIEF-25-11.md. Đọc thẳng file nguồn, không tin báo cáo phiên.\nBài P: lấy 3 đoạn trích, mở src/ đối chiếu từng dòng giải thích với code thật; kiểm có dòng nào của lát bị bỏ sót. Báo cáo: lấy 5 con số và 1 hình, đối chiếu evidence và src/. Báo trước, chưa sửa.';
+var d2=document.createElement('details');var s2=document.createElement('summary');s2.textContent='Soát (dán cho Claude)';d2.appendChild(s2);
+var w2=document.createElement('div');var b2=document.createElement('button');b2.type='button';b2.textContent='Chép';var p2=document.createElement('pre');p2.textContent=soat;
+b2.onclick=function(){try{navigator.clipboard.writeText(soat);b2.textContent='Đã chép';setTimeout(function(){b2.textContent='Chép'},1500)}catch(e){}};
+w2.appendChild(b2);w2.appendChild(p2);d2.appendChild(w2);out.appendChild(d2);
+})();
+</script>
+</body>
+</html>

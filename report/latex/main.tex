@@ -6,6 +6,9 @@
 \usepackage{fontspec}
 % Times, đủ dấu tiếng Việt: Termes có sẵn trên Overleaf/TeX Live; máy Windows không có thì dùng Times New Roman
 \IfFontExistsTF{TeX Gyre Termes}{\setmainfont{TeX Gyre Termes}}{\setmainfont{Times New Roman}}
+% Chữ đơn cách cũng phải đủ dấu tiếng Việt (code trích từ src/ có chú thích tiếng Việt): Latin Modern Mono không có
+\IfFontExistsTF{DejaVu Sans Mono}{\setmonofont{DejaVu Sans Mono}[Scale=MatchLowercase]}%
+  {\IfFontExistsTF{Consolas}{\setmonofont{Consolas}[Scale=MatchLowercase]}{\setmonofont{Courier New}[Scale=MatchLowercase]}}
 \usepackage{polyglossia}
 \setdefaultlanguage{vietnamese}
 
@@ -20,7 +23,9 @@
 \usepackage{amsmath}
 \usepackage{xcolor}
 \usepackage{listings}
+\usepackage{fvextra}
 \usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,shapes.geometric,calc}
 \usepackage{caption}
 \captionsetup{labelsep=colon,labelfont=bf,font=small}
 \usepackage{titlesec}
@@ -72,6 +77,10 @@
 \lstset{basicstyle=\ttfamily\footnotesize,frame=single,numbers=left,numberstyle=\tiny,
         breaklines=true,columns=fullflexible,keepspaces=true}
 
+% Trích code từ src/: \maunguon{file}{dòng đầu}{dòng cuối}{chú thích}. Dùng fancyvrb vì listings làm hỏng chữ có dấu trong chú thích code.
+\renewcommand{\lstlistingname}{Mã}
+\newcommand{\maunguon}[4]{\par\medskip\noindent\begin{minipage}{\linewidth}\captionof{lstlisting}{#4}%
+  \VerbatimInput[numbers=left,numbersep=6pt,firstline=#2,lastline=#3,firstnumber=#2,fontsize=\footnotesize,frame=single,breaklines=true]{#1}\end{minipage}\par\medskip}
 % --- Macro cho khung: xóa hết trước khi nộp (grep TODO) ---
 \newcommand{\TODO}[1]{\par\noindent\colorbox{yellow!30}{\parbox{\dimexpr\linewidth-2\fboxsep}{\small\textbf{TODO:} #1}}\par}
 \newcommand{\TODOmssv}{\textit{MSSV}}

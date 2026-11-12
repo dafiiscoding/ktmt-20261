@@ -1,0 +1,127 @@
+<!doctype html><html lang=vi><meta charset=utf-8><meta name=viewport content="width=device-width,initial-scale=1"><title>Hỏi đáp code - bảo vệ 25/11</title><style>body{font:17px/1.65 system-ui,sans-serif;max-width:920px;margin:0 auto;padding:16px;color:#1f2933;background:#fff}h1{font-size:1.7em}h2{margin-top:1.8em;border-bottom:2px solid #dbe4ee;padding-bottom:4px}.w{overflow-x:auto}table{border-collapse:collapse;width:100%;font-size:14.5px;margin:1em 0}td,th{border:1px solid #cfd8e3;padding:6px 8px;vertical-align:top}th{background:#eef3f9;text-align:left}pre{background:#f3f5f8;padding:12px;overflow:auto;border-radius:6px}code{background:#f0f2f5;padding:1px 4px;border-radius:3px}blockquote{border-left:4px solid #3b82f6;margin:1em 0;padding:.4em 1em;background:#eef5ff}@media(prefers-color-scheme:dark){body{background:#14181d;color:#dde3ea}th{background:#222a33}td,th{border-color:#34404d}pre,code{background:#222a33}blockquote{background:#1c2733}h2{border-color:#34404d}}</style><body><h1>HOI-DAP-CODE — 20 phút thầy hỏi xoáy code (bảo vệ 25/11/2026)</h1>
+<p>File cho người đọc là nhóm, để tập. Theo <code>report/BRIEF-25-11.md</code> mục 3b. Gồm 6 câu chắc chắn bị hỏi, 5 đến 7 câu cho mỗi lát TV1–TV5 (thêm B6, C6, F6 ngày 12/11 cho ca chia có dấu, thí nghiệm bấm nút E3 và hiệu chỉnh <code>CAL</code>).</p>
+<p><b>Nguồn và mức chắc chắn.</b></p>
+<ul><li>Brief mục 3b ghi "lấy từ bài P và C0". Các bài P1–P5, C0 và U1 nay đã có trong <code>learn/on-tap-btl/nguon/02-code.md</code> (12/11); phần đã viết ở đây lấy từ V0, code trong <code>src/</code> và <code>docs/pipeline-policy.md</code>, chưa đối chiếu lại từng câu với bài P (unverified). Câu mới B6, C6, F6 lấy từ bài P1, C0, U1.</li><li>Mọi <code>file:dòng</code> đã grep/đọc lại ngày 12/11/2026 trên <code>src/</code> hiện tại. Nếu ai sửa <code>src/</code> thì dòng lệch, kiểm lại bằng <code>grep -n</code>. (verified, nhưng chỉ đúng tại thời điểm này)</li><li>Lát TV1–TV5 theo bảng mục 1 của brief. Tên người ứng với TV chưa chọn.</li><li>Chưa có số "mất bao lâu" của từng lệnh test. Chạy thử trên máy trình chiếu trước ngày bảo vệ. (unverified)</li></ul>
+<p><b>Cách dùng.</b> Thầy chỉ vào đâu thì chủ lát mở đúng <code>file:dòng</code>, đọc dòng đó trước, rồi mới trả lời. Chưa chắc thì nói "em chưa chắc, em mở code kiểm". Không đoán.</p>
+<p>---</p>
+<h2>A. Sáu câu chắc chắn bị hỏi</h2>
+<h3>A1. Vì sao nhánh quyết định ở EX mà không ở ID?</h3>
+<p><b>Chỉ vào:</b> <code>src/cpu_pipe.v:175-178</code> (<code>take</code>), <code>:131-132</code> (<code>opA</code>/<code>opB</code> sau forwarding), <code>:293-294</code> (nạp đích, hủy lệnh vừa lấy); lý do ghi ở <code>docs/pipeline-policy.md</code> §5 (dòng 135 trở xuống).</p>
+<p><b>Đáp:</b> Ở tầng EX hai toán hạng đã đi qua forwarding (<code>opA</code>, <code>opB</code>), nên so sánh <code>eq</code> dùng lại đường sẵn có. Đặt ở ID thì phải thêm bộ so sánh, thêm đường forwarding về ID, và phải stall khi nhánh phụ thuộc lệnh ngay trước (ALU 1 chu kỳ, <code>lw</code> 2 chu kỳ). Cái giá là phạt 2 chu kỳ mỗi lần nhảy thật, bài mẫu ở ID chỉ phạt 1. Em chọn ít ca đặc biệt hơn để ít lỗi hơn; số đo: 157 608 chu kỳ mất vì nhánh, 22,9 % (<code>so_ktmt.py</code>).</p>
+<h3>A2. Vì sao G1 cần 2 pha?</h3>
+<p><b>Chỉ vào:</b> <code>src/cpu_g1.v:19-21</code> (comment giải thích), <code>:58-59</code> (<code>ph_a</code>, <code>ph_b</code>), <code>:192</code> (IMEM chốt lệnh ở pha A), <code>:202</code> và <code>:211</code> (<code>phb</code> đổi pha).</p>
+<p><b>Đáp:</b> IMEM và DMEM trong FPGA là BRAM đọc đồng bộ: địa chỉ chốt ở một cạnh clock thì dữ liệu mới có ở cạnh sau. Vì vậy một chu kỳ CPU chia hai cạnh <code>cpu_ce</code>: pha B làm việc với bộ nhớ dữ liệu và ngoại vi, pha A cập nhật PC, regfile, CP0 và chốt lệnh kế. Ghi nhớ: B (bộ nhớ) trước, A (cập nhật) sau. Hệ quả: G1 chạy D = 2, tức CPU bước mỗi 2 chu kỳ hệ thống.</p>
+<h3>A3. <code>slt</code> khi tràn thì đúng không?</h3>
+<p><b>Chỉ vào:</b> <code>src/alu.v:26</code> (<code>lt</code>), <code>:35</code> (<code>ALU_SLT: y = {31'd0, lt}</code>), comment giải thích ở <code>:21-25</code>.</p>
+<p><b>Đáp:</b> Đúng. Nếu chỉ nhìn bit dấu của <code>a - b</code> thì sai khi phép trừ tràn: ví dụ <code>a = 0</code>, <code>b = 0x80000000</code> thì <code>diff[31] = 1</code> nên ra 1, trong khi đúng là 0 vì <code>b</code> là số âm nhỏ nhất. Dòng 26 xử lý bằng cách: nếu hai bit dấu khác nhau thì lấy <code>a[31]</code>, ngược lại mới lấy <code>diff[31]</code>. Kiểm chứng: cài lỗi <code>lt = diff[31]</code> thì <code>alu_tb</code> báo <code>FAIL</code> đúng ca <code>ctl=5 a=0 b=80000000</code> (V0, mục Sửa tại chỗ).</p>
+<h3>A4. Forwarding ưu tiên nguồn nào?</h3>
+<p><b>Chỉ vào:</b> <code>src/hazard.v:46-48</code> (toán hạng A), <code>:51-53</code> (toán hạng B), <code>src/cpu_pipe.v:131-132</code> (MUX chọn).</p>
+<p><b>Đáp:</b> Ưu tiên EX/MEM (mã <code>10</code>) trước MEM/WB (mã <code>01</code>), còn không trùng thì dùng giá trị đã đọc ở ID (<code>00</code>). Vì EX/MEM giữ kết quả mới hơn: nếu hai lệnh liền trước cùng ghi một thanh ghi thì lệnh gần hơn mới đúng. Điều kiện còn có đích khác <code>$zero</code> (<code>dst != 0</code>), vì <code>$0</code> luôn bằng 0, không được lấy tắt.</p>
+<h3>A5. Ngắt đến lúc đang <code>div</code> thì sao?</h3>
+<p><b>Chỉ vào:</b> <code>src/cpu_pipe.v:202-204</code> (<code>take_irq</code> có <code>!stall_busy</code> và <code>idex_multi == 2'b00</code>), <code>:148</code> (<code>stall_busy</code>), <code>:122</code> (<code>irq_epc</code>); <code>docs/pipeline-policy.md</code> §10 (dòng 276, bảng "Sự kiện đến khi <code>div</code> đang chạy").</p>
+<p><b>Đáp:</b> Ngắt không được nhận khi <code>div</code>/<code>bcd</code> chưa xong: chờ <code>div</code> xong rồi mới nhận, EPC là lệnh sau <code>div</code>. Lý do (inference, suy từ code, chưa thấy ghi rõ): <code>div</code> đã chiếm trạm EX và sắp ghi HI/LO, hủy giữa chừng thì trạng thái nửa vời. G1 tương tự: <code>take_irq</code> có <code>!stall</code> (<code>src/cpu_g1.v:166</code>). Kiểm chứng: đột biến "bỏ chặn <code>div</code>" bị cosim bắt (<code>pipeline-policy.md</code> §10).</p>
+<h3>A6. Code này ai viết, em hiểu tới đâu?</h3>
+<p><b>Chỉ vào:</b> phụ lục A của báo cáo; <code>report/BRIEF-25-11.md</code> mục 0; lát của mình (bảng mục 1).</p>
+<p><b>Đáp:</b> Nói thật: phần lớn code do AI viết, nhóm đã khai ở phụ lục A. Mỗi người đã đọc từng dòng lát của mình, tự chạy lệnh test của lát đó và biết một đột biến nào thì test nào bắt. Phần mở rộng (UART, VGA, <code>CAL</code>, phụ lục D) có AI hỗ trợ, đã khai. Chỗ nào chưa chắc thì mở code kiểm, không đoán.</p>
+<p>---</p>
+<h2>B. TV1 — EX, số học (<code>alu.v</code>, <code>muldiv.v</code>, <code>cpu_g1.v:87-106</code>, <code>cpu_pipe.v:129-183</code>)</h2>
+<p>Lệnh chạy khi bị yêu cầu: <code>bash tools/run_unit.sh alu muldiv</code>.</p>
+<h3>B1. ALU làm những phép gì, chọn bằng gì?</h3>
+<p><b>Chỉ vào:</b> <code>src/alu.v:17-18</code> (8 mã), <code>:28-39</code> (<code>case (ctl)</code>), <code>:38</code> (<code>default</code>).</p>
+<p><b>Đáp:</b> Tám phép (cộng, trừ, and, or, xor, <code>slt</code>, dịch trái, dịch phải số học), chọn bằng <code>ctl</code> 4 bit qua một <code>case</code>. Đây là MUX 8 đường: các phép đều có mạch riêng chạy song song, <code>ctl</code> chỉ chọn kết quả nào ra <code>y</code>. Mã lạ thì <code>y = 0</code> nhờ <code>default</code>.</p>
+<h3>B2. <code>output reg [31:0] y</code> có phải ô nhớ không?</h3>
+<p><b>Chỉ vào:</b> <code>src/alu.v:13</code> (khai <code>reg</code>), <code>:28</code> (<code>always @*</code>), <code>:38</code> (<code>default</code>).</p>
+<p><b>Đáp:</b> Không. <code>reg</code> chỉ là kiểu biến Verilog bắt dùng cho tín hiệu gán trong <code>always</code>. Ô nhớ chỉ có khi khối chờ cạnh clock (<code>always @(posedge clk)</code>) hoặc có đường chạy không gán. Ở đây là <code>always @*</code> có đủ <code>default</code>, nên đổi <code>a</code>, <code>b</code>, <code>ctl</code> thì <code>y</code> đổi ngay, không cần clock.</p>
+<h3>B3. Chia hoạt động thế nào, mất bao nhiêu chu kỳ?</h3>
+<p><b>Chỉ vào:</b> <code>src/muldiv.v:44-48</code> (một bước chia khôi phục), <code>:51</code> (<code>last</code>), <code>:53-54</code> (<code>busy</code>, <code>done</code>).</p>
+<p><b>Đáp:</b> Chia khôi phục từng bit: dịch số dư sang trái, thử trừ (33 bit để thấy bit âm), nếu không âm thì bit thương là 1 và lấy hiệu, nếu âm thì giữ số dư cũ. Làm 32 bước, cộng 1 chu kỳ bắt đầu, nên 33 chu kỳ (bảng 7 chia 2 trên slide 10). Suốt thời gian đó <code>busy</code> bật và CPU phải chờ.</p>
+<h3>B4. Chia cho 0 xử lý thế nào?</h3>
+<p><b>Chỉ vào:</b> <code>src/muldiv.v:50</code> (<code>div0</code>), <code>:54</code> (<code>done</code> ngay), <code>:64-66</code> (<code>lo &lt;= 0</code>, <code>hi &lt;= a</code>, <code>dz &lt;= 1</code>).</p>
+<p><b>Đáp:</b> Chia 0 không chạy 32 bước: <code>done</code> lên ngay ở chu kỳ đầu, nên chỉ 1 chu kỳ. Kết quả quy ước <code>LO = 0</code>, <code>HI = a</code>, và cờ <code>dz</code> bật để biết đã chia 0. Quy ước này khớp với ISS, test <code>multi</code> có ca <code>div</code> chia 0 (slide dự phòng 5).</p>
+<h3>B5. Ở G2, ALU lấy toán hạng từ đâu?</h3>
+<p><b>Chỉ vào:</b> <code>src/cpu_pipe.v:131-132</code> (<code>opA</code>, <code>opB</code>), <code>:148</code> (<code>stall_busy</code>), <code>:175-178</code> (<code>take</code>, dùng <code>opA</code>/<code>opB</code>).</p>
+<p><b>Đáp:</b> Từ MUX forwarding: <code>fwd = 10</code> lấy <code>exm_res</code>, <code>01</code> lấy <code>wb</code>, <code>00</code> lấy giá trị <code>idex_a</code>/<code>idex_b</code> đã đọc ở ID. Cùng hai toán hạng đó đi vào ALU, vào so sánh nhánh, và vào bộ chia. Khi <code>div</code> đang chạy, <code>stall_busy = 1</code> giữ trạm EX nên toán hạng đứng yên đến khi xong.</p>
+<h3>B6. Chia có dấu: <code>0x80000000</code> chia <code>0xFFFFFFFF</code> ra bao nhiêu?</h3>
+<p><b>Chỉ vào:</b> <code>src/muldiv.v:72</code> (<code>quo &lt;= a[31] ? -a : a</code>), <code>:84-85</code> (sửa dấu <code>lo</code>, <code>hi</code>), <code>tb/vectors/div.txt:68</code>.</p>
+<p><b>Đáp:</b> <code>0x80000000</code> là −2 147 483 648, chia −1 lẽ ra ra +2 147 483 648 mà 32 bit không chứa được. Code lấy trị tuyệt đối (<code>|0x80000000| = 2^31</code> vẫn đúng khi hiểu không dấu), chia 32 bước ra thương <code>2^31</code>, hai số cùng dấu nên không đổi dấu: <code>LO = 0x80000000</code>, <code>HI = 0</code>. Dòng <code>80000000 FFFFFFFF 80000000 00000000 0</code> có trong <code>div.txt</code>, bài thử <code>muldiv_tb</code> PASS. (verified: dòng vector; kết luận "không tràn" theo nghĩa LO giữ nguyên bit là inference từ code)</p>
+<p>---</p>
+<h2>C. TV2 — hazard, forwarding, MEM, WB (<code>hazard.v</code>, <code>cpu_pipe.v:112-128, 184-206, 260-277</code>, <code>cpu_g1.v:119-147</code>)</h2>
+<p>Lệnh chạy: <code>bash tools/run_unit.sh hazard</code>, <code>python tools/cosim_iss.py --g2 --rand 0</code>.</p>
+<h3>C1. Điều kiện forwarding đủ những gì?</h3>
+<p><b>Chỉ vào:</b> <code>src/hazard.v:46</code> (<code>exmem_reg_write &amp;&amp; exmem_dst != 0 &amp;&amp; exmem_dst == idex_rs</code>).</p>
+<p><b>Đáp:</b> Ba điều kiện cùng đúng: lệnh ở tầng sau có ghi thanh ghi, đích khác <code>$zero</code>, và đích trùng thanh ghi nguồn của lệnh ở EX. Thiếu <code>dst != 0</code> thì lệnh ghi vào <code>$0</code> có thể bị lấy tắt, sai vì <code>$0</code> luôn bằng 0. Test <code>zero_reg</code> kiểm đúng chỗ này.</p>
+<h3>C2. Load-use dừng khi nào, vì sao forwarding không cứu được?</h3>
+<p><b>Chỉ vào:</b> <code>src/hazard.v:39-40</code> (<code>stall_lu</code>), <code>src/cpu_pipe.v:292</code> (<code>if (!stall_lu)</code> giữ PC/IF-ID).</p>
+<p><b>Đáp:</b> <code>lw</code> chỉ có dữ liệu ở cuối tầng MEM, trong khi lệnh sau cần nó ở đầu EX, nên chuyển thẳng không kịp. Điều kiện: lệnh ở EX là <code>lw</code> đích khác 0, và lệnh ở ID thật sự dùng <code>rs</code> hoặc <code>rt</code> trùng đích (<code>uses_rs</code>, <code>uses_rt</code>). Kết quả: dừng đúng 1 chu kỳ, lệnh ở EX thành bong bóng một nhịp.</p>
+<h3>C3. Dòng nào chèn bong bóng khi nhảy? <code>flush</code> dùng làm gì?</h3>
+<p><b>Chỉ vào:</b> <code>src/hazard.v:41</code> (<code>assign flush = taken</code>), <code>src/cpu_pipe.v:205</code> (<code>id_ok</code>), <code>:279</code> (<code>idex_v &lt;= id_ok</code>), <code>:294</code> (<code>ifid_v &lt;= !take</code>).</p>
+<p><b>Đáp:</b> Trung thực: dây <code>flush</code> có trong <code>hazard.v</code> nhưng ở <code>cpu_pipe.v</code> chỉ được khai (dòng 115), nối vào <code>hazard</code> (127) và nhét vào <code>unused_ok</code> (302), không điều khiển gì. Bong bóng thật được tạo bằng cờ hợp lệ: <code>id_ok = 0</code> thì <code>idex_v</code> ghi 0 (bong bóng vào ID/EX), <code>ifid_v &lt;= !take</code> thì lệnh vừa lấy nhầm thành bong bóng. Em nói thẳng điều này nếu thầy hỏi "flush ở đâu". (verified: grep <code>flush</code> trong <code>src/cpu_pipe.v</code> ra 3 dòng 115, 127, 302)</p>
+<h3>C4. MEM/WB ghi regfile cùng lúc ID đọc thì sao?</h3>
+<p><b>Chỉ vào:</b> <code>src/cpu_pipe.v:109</code> (<code>regfile #(.G_BYPASS(1))</code>), <code>src/regfile.v:41-46</code>.</p>
+<p><b>Đáp:</b> G2 bật <code>G_BYPASS = 1</code>: nếu đang ghi vào đúng ngăn đang đọc thì cổng đọc trả luôn <code>wd</code> (dòng 45-46), không chờ cạnh clock sau. Nếu thiếu, lệnh ở ID cách lệnh ở WB 3 nhịp sẽ đọc giá trị cũ. G1 đặt <code>G_BYPASS = 0</code> (<code>src/cpu_g1.v:84</code>) vì ghi ở pha A, đọc ở lệnh kế, không chồng nhau.</p>
+<h3>C5. Lệnh <code>lw</code>/<code>sw</code> chạm bộ nhớ ở tầng nào, ngoại vi thì sao?</h3>
+<p><b>Chỉ vào:</b> <code>src/cpu_pipe.v:190-191</code> (<code>bus_we</code>, <code>bus_re</code>), <code>:198</code> (<code>retire</code>), <code>src/cpu_g1.v:119-147</code> (G1 pha B).</p>
+<p><b>Đáp:</b> Ở G2, <code>bus_we</code>/<code>bus_re</code> bật khi lệnh ở tầng MEM, hợp lệ, là <code>sw</code>/<code>lw</code> và địa chỉ nằm trong vùng MMIO. Lệnh sai nhánh (đã bị hủy) có <code>exm_v = 0</code> nên không chạm bus: đây là điều test <code>mmio_once</code> kiểm. Ở G1 việc này nằm ở pha B (<code>bus_re = ph_b &amp;&amp; mem_read &amp;&amp; in_mmio</code>).</p>
+<h3>C6. Thí nghiệm bấm nút E3: ngắt hay polling chính xác hơn?</h3>
+<p><b>Chỉ vào:</b> <code>fw/exp/e3_irq.s:9-10</code> (lệnh đầu handler đọc <code>MS_OF_DAY</code>), <code>evidence/20261026_exp_e3.log</code> (bảng trễ), <code>report/2.5-e3-thi-nghiem.md</code>.</p>
+<p><b>Đáp:</b> Ở <code>CPU_CLK_DIV = 1526</code> (CPU như đồng hồ 32 kHz) ngắt trễ trung bình 466 µs còn polling 740 µs, nên ngắt tốt hơn khoảng 37 %; ở D = 2 cả hai dưới 1 µs. Capture phần cứng (stopwatch <code>SRC = 1</code>) và dấu thời gian trong <code>BTN_EVENT</code> cho trễ 0, đúng chu kỳ nhấn, 6 000 trên 6 000 lần. Ngắt chậm nhất khoảng 34 lệnh vì nếu nút đến lúc <code>div</code> (33 chu kỳ) vừa bắt đầu thì ngắt phải chờ. (verified: số từ log; số 37 % là phép tính của file này <code>1 − 466/740</code>)</p>
+<p>---</p>
+<h2>D. TV3 — ID, điều khiển (<code>control.v</code>, <code>regfile.v</code>, <code>cpu_g1.v:61-86</code>, <code>cpu_pipe.v:85-111</code>, <code>:278-290</code>)</h2>
+<p>Lệnh chạy: <code>bash tools/run_unit.sh regfile control</code>.</p>
+<h3>D1. Chọn một lệnh, nói nó bật tín hiệu nào.</h3>
+<p><b>Chỉ vào:</b> <code>src/control.v:87</code> (<code>lw</code>), <code>:89</code> (<code>sw</code>), <code>:82</code> (<code>addiu</code>).</p>
+<p><b>Đáp:</b> <code>lw</code> bật <code>alu_src</code> (dùng immediate), <code>mem_read</code>, <code>mem_to_reg</code>, <code>reg_write</code>, và ALU làm phép cộng ra địa chỉ. <code>sw</code> bật <code>alu_src</code>, <code>mem_write</code>, không ghi regfile. <code>addiu</code> chỉ qua ALU, không động bộ nhớ. Toàn bộ 28 lệnh là một bảng chân lý như vậy, 17 tín hiệu ra (slide 7 chỉ hiện 6 cột).</p>
+<h3>D2. <code>$zero</code> được bảo vệ thế nào?</h3>
+<p><b>Chỉ vào:</b> <code>src/regfile.v:33</code> (ghi: <code>wa != 5'd0</code>), <code>:45-46</code> (đọc: <code>ra == 5'd0 ? 0</code>).</p>
+<p><b>Đáp:</b> Hai lớp che nhau: khi ghi, bỏ qua <code>wa = 0</code>; khi đọc, ngăn số 0 luôn trả 0. Bỏ riêng một lớp thì test vẫn PASS vì lớp kia che (lỗi tương đương), phải bỏ cả hai mới thấy. Đây là ca đột biến thứ 3 trong V0.</p>
+<h3>D3. Regfile đọc tổ hợp, ghi theo clock nghĩa là gì?</h3>
+<p><b>Chỉ vào:</b> <code>src/regfile.v:28</code> (<code>always @(posedge clk)</code> ghi), <code>:45-46</code> (<code>assign</code> đọc).</p>
+<p><b>Đáp:</b> Đọc là <code>assign</code>: đổi <code>ra1</code> thì <code>rd1</code> đổi ngay, không chờ clock. Ghi nằm trong khối cạnh lên clock, dùng <code>&lt;=</code>, nên 32 ô cùng đổi một lúc. Ngăn không được ghi thì giữ nguyên giá trị.</p>
+<h3>D4. Immediate mở rộng thế nào?</h3>
+<p><b>Chỉ vào:</b> <code>src/cpu_g1.v:76-77</code> (<code>imm_x</code>).</p>
+<p><b>Đáp:</b> Ba kiểu chọn bằng <code>ext</code>: <code>01</code> thêm 16 bit 0 phía trước (không dấu, cho <code>andi</code>/<code>ori</code>), <code>10</code> đặt <code>imm</code> lên 16 bit cao (<code>lui</code>), còn lại mở rộng dấu bằng cách chép bit <code>imm[15]</code> 16 lần. Ba MUX nối nhau. Sai kiểu thì <code>addiu</code> với số âm hoặc <code>ori</code> với số lớn sẽ ra sai.</p>
+<h3>D5. <code>uses_rs</code>, <code>uses_rt</code> để làm gì?</h3>
+<p><b>Chỉ vào:</b> <code>src/control.v:30-31</code> (khai), <code>:76</code> (<code>jr</code> dùng <code>rs</code>), <code>src/hazard.v:39-40</code>.</p>
+<p><b>Đáp:</b> Để hazard biết lệnh ở ID có đọc thanh ghi nguồn thật hay không. <code>addiu</code> không đọc <code>rt</code> (<code>rt</code> là đích), nếu hazard cứ so <code>rt</code> thì sẽ dừng thừa. Thiếu <code>uses_rt</code> thì có thêm stall oan, không sai kết quả nhưng chậm.</p>
+<p>---</p>
+<h2>E. TV4 — IF, PC, nhánh, G1 2 pha, <code>bcd</code> (<code>cpu_g1.v:46-60, 148-231</code>, <code>cpu_pipe.v:56-60, 291-304</code>, <code>bcd_unit.v</code>)</h2>
+<p>Lệnh chạy: <code>bash tools/run_unit.sh bcd</code>, <code>python tools/cosim_iss.py --rand 0</code>.</p>
+<h3>E1. PC kế tiếp chọn thế nào?</h3>
+<p><b>Chỉ vào:</b> <code>src/cpu_g1.v:154-161</code>.</p>
+<p><b>Đáp:</b> Chuỗi <code>if / else if</code> bảy mức, trên thắng dưới: reset → <code>stall</code> (giữ PC) → <code>eret</code> (<code>epc</code>) → <code>jr</code> → <code>j</code>/<code>jal</code> → nhánh đúng (<code>pc4 + imm&lt;&lt;2</code>) → <code>pc4</code>. Có ngắt thì <code>pc_new = 0x180</code> đè lên cả chuỗi (<code>:167</code>). Đảo thứ tự thì ví dụ <code>stall</code> xuống dưới sẽ làm CPU nhảy khi đang chờ <code>div</code>.</p>
+<h3>E2. Tại sao <code>phb</code> đổi ở hai chỗ?</h3>
+<p><b>Chỉ vào:</b> <code>src/cpu_g1.v:196</code> (reset: <code>phb &lt;= 1</code>), <code>:202</code> (<code>phb &lt;= 0</code> sau pha B), <code>:211</code> (<code>phb &lt;= 1</code> sau pha A).</p>
+<p><b>Đáp:</b> <code>phb</code> là cờ "cạnh kế là pha B". Sau reset đặt 1 vì IMEM đã chứa lệnh 0 nên cạnh đầu là pha B của lệnh 0 (comment dòng 9). Pha B xong thì <code>phb = 0</code> để cạnh sau là pha A, pha A xong lại 1. Hai pha luân phiên mãi.</p>
+<h3>E3. Khi <code>div</code> đang chạy, PC làm gì ở G1?</h3>
+<p><b>Chỉ vào:</b> <code>src/cpu_g1.v:105</code> (<code>stall</code>), <code>:156</code> (<code>else if (stall) next_pc = pc</code>), <code>:212</code> (<code>started</code>).</p>
+<p><b>Đáp:</b> <code>stall = 1</code> khi lệnh là <code>div</code>/<code>bcd</code> mà <code>done</code> chưa lên, và <code>next_pc = pc</code> nên PC đứng yên, regfile không ghi (<code>rf_we</code> có <code>!stall</code>, <code>:83</code>). Khi <code>done</code> lên thì <code>stall</code> tụt, lệnh hoàn tất và PC mới chạy tiếp. Đây cũng là lý do ngắt không được nhận lúc đang <code>stall</code> (<code>:166</code>).</p>
+<h3>E4. <code>bcd</code> làm gì, bao nhiêu chu kỳ, số quá lớn thì sao?</h3>
+<p><b>Chỉ vào:</b> <code>src/bcd_unit.v:7-10</code> (comment lịch chu kỳ), <code>:55-57</code> (bản tổ hợp <code>G_COMB</code>), <code>:68-70</code> (bản tuần tự).</p>
+<p><b>Đáp:</b> Đổi số nhị phân ra BCD, mỗi chữ số 4 bit để hiển thị 8 chữ số. Bản tuần tự mất 28 chu kỳ (1 bắt đầu + 27 bước), bản tổ hợp 27 tầng cho kết quả ngay (<code>busy = 0</code>, tốn thêm LUT). Số lớn hơn 99 999 999 thì <code>done</code> ngay và <code>y = 0xFFFFFFFF</code>.</p>
+<h3>E5. Ở G2, dòng nào nạp PC và hủy lệnh nhầm?</h3>
+<p><b>Chỉ vào:</b> <code>src/cpu_pipe.v:293</code> (<code>pc &lt;= take_irq ? 0x180 : take ? tgt : pc + 4</code>), <code>:294</code> (<code>ifid_v &lt;= !take &amp;&amp; !take_irq</code>).</p>
+<p><b>Đáp:</b> Mỗi chu kỳ PC lấy một trong ba: <code>0x180</code> nếu nhận ngắt, đích <code>tgt</code> nếu nhánh/nhảy đúng, còn lại <code>pc + 4</code>. Cùng lúc <code>ifid_v = 0</code> nên lệnh vừa lấy ở nhịp này thành bong bóng. Cả khối đóng băng khi <code>stall_lu</code> (<code>:292</code>).</p>
+<p>---</p>
+<h2>F. TV5 — CP0, ngắt, xung CPU (<code>irq_ctrl.v</code>, <code>soc_regs.v</code>, <code>cpu_g1.v:107-118</code>, <code>cpu_pipe.v:246-259</code>, <code>pipeline-policy.md</code> §10)</h2>
+<p>Lệnh chạy: <code>bash tools/run_unit.sh irq soc_clock</code>.</p>
+<h3>F1. Điều kiện nhận ngắt gồm những vế nào?</h3>
+<p><b>Chỉ vào:</b> <code>src/cpu_g1.v:166</code> (G1), <code>src/cpu_pipe.v:202-204</code> (G2).</p>
+<p><b>Đáp:</b> G1 có năm vế: có yêu cầu <code>irq</code>, <code>Status.IE = 1</code>, <code>EXL = 0</code>, không <code>stall</code>, và lệnh không phải CP0. G2 thêm vì có nhiều lệnh dở dang: không <code>stall_lu</code>, không <code>stall_busy</code>, không có lệnh CP0 ở các tầng sau. (Brief ghi "bốn vế", code có năm vế ở G1: tiêu đề slide 23 viết "năm vế".)</p>
+<h3>F2. EPC lưu địa chỉ nào?</h3>
+<p><b>Chỉ vào:</b> G1 <code>src/cpu_g1.v:221</code> (<code>epc &lt;= next_pc</code>); G2 <code>src/cpu_pipe.v:122</code> (<code>irq_epc</code>), <code>:255</code>.</p>
+<p><b>Đáp:</b> G1: lệnh vừa xong đã chạy trọn, nên EPC là lệnh kế tiếp. G2: EPC là lệnh cũ nhất chưa xong, lấy theo thứ tự <code>idex_pc</code>, nếu không có thì <code>ifid_pc</code>, nếu không thì <code>pc</code>. Vì vậy lệnh bị hủy sẽ chạy lại sau <code>eret</code>, không mất lệnh.</p>
+<h3>F3. <code>eret</code> làm gì?</h3>
+<p><b>Chỉ vào:</b> <code>src/cpu_g1.v:157</code> (<code>next_pc = epc</code>), <code>src/cpu_pipe.v:252</code> (<code>status[1] &lt;= 0</code>), <code>:179</code> (<code>tgt = epc</code>).</p>
+<p><b>Đáp:</b> <code>eret</code> nạp PC bằng <code>epc</code> và xóa <code>EXL</code> về 0 để cho phép ngắt lại. <code>EXL = 1</code> từ lúc vào ngắt chặn ngắt lồng nhau (G1 và G2 giống nhau). <code>Status = $12</code>, <code>Cause = $13</code>, <code>EPC = $14</code>.</p>
+<h3>F4. Bộ ngắt <code>irq_ctrl</code> lấy sự kiện thế nào?</h3>
+<p><b>Chỉ vào:</b> <code>src/irq_ctrl.v:33-34</code> (<code>ip</code>, <code>irq</code>), <code>:37</code> (<code>clr</code>), <code>:46</code> (<code>pending</code>), <code>:49</code> (<code>stamp</code>).</p>
+<p><b>Đáp:</b> Có 8 sự kiện; mỗi sự kiện đến thì bit <code>pending</code> bật, chỉ tính nguồn đã <code>enable</code>. <code>irq</code> là OR của các nguồn đó. Ghi 1 vào <code>PEND</code> thì xóa bit; nếu sự kiện đến cùng chu kỳ với lệnh xóa thì sự kiện thắng (dòng 46). <code>stamp</code> ghi lại <code>CYCLE_COUNT</code> lúc <code>irq</code> lên, dùng đo độ trễ (phụ lục E3).</p>
+<h3>F5. CPU không có clock riêng, vậy "CPU clock" là gì?</h3>
+<p><b>Chỉ vào:</b> <code>src/soc_regs.v:53</code> (<code>assign cpu_ce</code>), <code>:45-48</code> (<code>norm</code>, luật ép D), <code>:65-66</code> (nạp <code>p</code> ở mỗi <code>cpu_ce</code>).</p>
+<p><b>Đáp:</b> CPU chạy cùng clock hệ thống 50 MHz, chỉ khác là được phép bước khi có xung <code>cpu_ce</code>, phát mỗi <code>D/2</code> hoặc <code>D</code> chu kỳ. Ghi <code>D</code> mới chỉ có hiệu lực từ chu kỳ CPU kế (<code>:66</code>). Luật ép: G1 cần D chẵn và tối thiểu 2 (mỗi chu kỳ CPU dùng 2 xung), G2 tối thiểu 1. Vì vậy G1 25 MHz (D=2) và G2 50 MHz (D=1).</p>
+<h3>F6. <code>CAL</code> hiệu chỉnh đồng hồ thế nào, 1 ppm bằng bao nhiêu?</h3>
+<p><b>Chỉ vào:</b> <code>src/timebase.v:34-37</code> (<code>s_now</code>, <code>s_cur</code>, <code>len</code>), <code>:40</code> (<code>tick</code>), <code>:50-52</code> (giữ phần lẻ), <code>evidence/20261026_exp_cal.log</code>.</p>
+<p><b>Đáp:</b> Mỗi mili giây cộng <code>CAL</code> vào phần lẻ <code>frac</code> (16 bit, đơn vị 1/65 536 chu kỳ); phần nguyên <code>s &gt;&gt;&gt; 16</code> là số chu kỳ thêm vào độ dài mili giây <code>len = 50 000 + (s &gt;&gt;&gt; 16)</code>. 1 ppm của 50 000 chu kỳ là 0,05 chu kỳ, nên bằng 3 276,8 đơn vị <code>CAL</code>; <code>CAL = 163 840</code> ra 2,5 chu kỳ thêm mỗi mili giây, dài 50 002 và 50 003 xen kẽ. <code>CAL</code> dương làm đồng hồ chậm lại. Dùng <code>&gt;&gt;&gt;</code> vì <code>CAL</code> âm cần dịch số học. <code>exp_cal_tb</code> PASS 10. (verified: dòng code và log; tính tay trong bài U1)</p>
+<p>---</p>
+<h2>G. Việc cần làm trước ngày bảo vệ</h2>
+<ul><li>Mỗi người chạy lệnh test của lát mình trên máy trình chiếu, ghi thời gian chạy. (unverified)</li><li>Mở sẵn các <code>file:dòng</code> ở trên trong editor có số dòng. Nếu <code>src/</code> đổi thì grep lại.</li><li>Tập trả lời theo thứ tự: chủ lát nói trước, lát kề bổ sung.</li></ul></body></html>

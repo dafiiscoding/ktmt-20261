@@ -1,22 +1,112 @@
 \chapter{GIỚI THIỆU}
 
-\section{Mô tả dự án và yêu cầu bài toán}
-\subsection{Tên đề tài và mục tiêu}
-\TODO{Long. Tên đề tài; mục tiêu dạng gạch đầu dòng (G1 đơn chu kỳ, G2 pipeline, SoC đồng hồ: timers, hiển thị, ngắt, UART đồng bộ giờ).}
-\subsection{Đồng hồ điện tử thật làm gì}
-\TODO{Long. Casio module 593 (F-91W), DS3231, timer MCU STM32. Đặt câu hỏi xuyên suốt: ``chuẩn tới ms thì phần nào phải là phần cứng?'' — được trả lời ở mục~\ref{sec:thi-nghiem}.}
-\subsection{Yêu cầu hệ thống}
-\TODO{Long. Yêu cầu ISA, datapath, hazard, ngoại vi, công cụ. Nguồn: \texttt{PLAN\_DONG\_HO.md}, \texttt{docs/goi-viec.md}.}
+\section{Bài toán}\label{sec:bai-toan}
+Đề tài thiết kế \textbf{WatchChip}: con chip của một chiếc đồng hồ điện tử kiểu Casio F-91W, viết bằng Verilog. Chip có CPU MIPS32 tự viết, bộ đếm thời gian, hiển thị LED 7 đoạn và VGA, còi, UART và ngắt. CPU có hai bản: \textbf{G1} chạy đơn chu kỳ, \textbf{G2} chạy đường ống 5 tầng. Cả hai chạy cùng một tập 28 lệnh và cùng một firmware.
 
-\section{Cơ sở lý thuyết: kiến trúc tập lệnh MIPS}
+Đồng hồ có năm chế độ: xem giờ, chỉnh giờ, bấm giờ, hẹn giờ (đếm xuống 0 rồi đếm tiếp sang số âm) và báo thức. Giờ có thể đồng bộ với máy tính qua UART.
+
+Câu hỏi xuyên suốt của đồ án là: \emph{muốn đồng hồ chuẩn tới 1 ms thì phần nào phải là phần cứng?} Phép tính mở đầu rất ngắn. Để sai không quá 1 ms sau 1 giờ (3600 s), tần số phải sai không quá $1\,\text{ms} / 3600\,\text{s} = 0{,}28$ ppm. Một thạch anh thông thường sai cỡ $\pm 50$ ppm (giả định, chưa kiểm datasheet), tức lệch $50 \times 10^{-6} \times 3600 = 0{,}18$ s mỗi giờ. Vì vậy chip cần hiệu chỉnh tần số theo giờ chuẩn từ máy tính (thanh ghi 	exttt{CAL}) và cần bộ đếm phần cứng. Câu trả lời bằng số đo nằm ở mục~\ref{sec:thi-nghiem}.
+
+\paragraph{Phạm vi.} Đề tài chỉ chạy trong mô phỏng, không nạp lên board. Để mô phỏng nhanh, 1 ms của chip được rút thành $G_N = 50$ nhịp xung hệ thống thay vì 50\,000. Mục~\ref{sec:cong-cu} nói rõ hệ quả của hai điều này.
+
+\section{Cơ sở lý thuyết: kiến trúc tập lệnh MIPS}\label{sec:mips}
 \subsection{Tổng quan MIPS ISA}
-\subsection{Tập thanh ghi}
-\subsection{Định dạng lệnh và 28 lệnh được hỗ trợ}
-\TODO{Bảng 28 lệnh lấy đúng \texttt{docs/isa-spec.md} (kể cả SPECIAL2, CP0).}
+Kiến trúc tập lệnh (ISA) là hợp đồng giữa phần mềm và phần cứng: lệnh nào có, mã hóa ra sao, mỗi lệnh làm gì. MIPS là ISA kiểu RISC: lệnh dài cố định 32 bit, chỉ \texttt{lw} và \texttt{sw} mới đụng bộ nhớ, mọi phép tính khác lấy toán hạng từ thanh ghi.
 
-\section{Cơ sở thiết kế}
+WatchChip dùng một tập con gồm 28 lệnh của MIPS32, cộng một lệnh riêng \texttt{bcd} (mục~\ref{sec:lenh}). Ba điểm khác với MIPS đầy đủ cần nhớ:
+\begin{itemize}
+  \item không có \emph{delay slot}: lệnh ngay sau nhánh hoặc nhảy chỉ chạy khi nhánh không nhảy;
+  \item không có ngoại lệ tràn số, lệnh lạ hay địa chỉ sai; nguồn duy nhất vào vector \texttt{0x180} là ngắt;
+  \item bộ nhớ kiểu Harvard: bộ nhớ lệnh (IMEM) và bộ nhớ dữ liệu (DMEM) tách riêng.
+\end{itemize}
+
+\subsection{Tập thanh ghi}
+Có 32 thanh ghi 32 bit \texttt{\$0}--\texttt{\$31}; \texttt{\$0} luôn đọc ra 0 và ghi vào bị bỏ. \texttt{jal} ghi địa chỉ quay về vào \texttt{\$31} (\texttt{\$ra}). Hai thanh ghi \texttt{HI} và \texttt{LO} giữ kết quả của \texttt{div}. Ba thanh ghi của bộ đồng xử lý CP0 dùng cho ngắt: \texttt{\$12} Status, \texttt{\$13} Cause, \texttt{\$14} EPC (mục~\ref{sec:ngat-lt}). Bộ đếm chương trình PC dài 32 bit, địa chỉ tính theo byte, lệnh luôn căn 4.
+
+\subsection{Định dạng lệnh và 28 lệnh được hỗ trợ}\label{sec:lenh}
+Mọi lệnh dài 32 bit và thuộc một trong ba khuôn chính R, I, J. Hai nhóm \texttt{SPECIAL2} và \texttt{COP0} dùng lại khuôn R với vài trường được gán nghĩa riêng.
+
+\begin{table}[htbp]
+\centering\small
+\begin{tabular}{@{}lllllll@{}}
+\toprule
+Khuôn & {[}31:26{]} & {[}25:21{]} & {[}20:16{]} & {[}15:11{]} & {[}10:6{]} & {[}5:0{]} \\
+\midrule
+R        & \texttt{op} = 0 & \texttt{rs} & \texttt{rt} & \texttt{rd} & \texttt{shamt} & \texttt{funct} \\
+I        & \texttt{op}     & \texttt{rs} & \texttt{rt} & \multicolumn{3}{l}{\texttt{imm} (16 bit)} \\
+J        & \texttt{op}     & \multicolumn{5}{l}{\texttt{target} (26 bit)} \\
+SPECIAL2 & \texttt{0x1C}   & \texttt{rs} & \texttt{rt} & \texttt{rd} & 0 & \texttt{funct} \\
+COP0     & \texttt{0x10}   & \texttt{sub} & \texttt{rt} & \texttt{rd} & 0 & 0 hoặc \texttt{0x18} \\
+\bottomrule
+\end{tabular}
+\caption{Các khuôn lệnh của WatchChip.}\label{tab:khuon}
+\end{table}
+
+Ký hiệu: $\mathtt{R[x]}$ là thanh ghi, $\mathtt{M[a]}$ là một word của bộ nhớ, $\mathtt{s(x)}$ hiểu số có dấu, $\mathtt{u(x)}$ hiểu số không dấu. $\mathtt{SE(imm)}$ là mở rộng dấu 16 lên 32 bit, $\mathtt{ZE(imm)}$ là mở rộng bằng 0. Đích nhánh là $\mathtt{PC + 4 + (SE(imm) \ll 2)}$; đích \texttt{j} và \texttt{jal} là 4 bit cao của $\mathtt{PC + 4}$ ghép với \texttt{target} và hai bit 0. Phép cộng và trừ lấy 32 bit thấp, không bẫy tràn. Trong \texttt{sub} của COP0, \texttt{0x00} là \texttt{mfc0}, \texttt{0x04} là \texttt{mtc0}, \texttt{0x10} là \texttt{eret}.
+
+Tập lệnh gồm 12 lệnh khuôn R, 9 lệnh khuôn I, 2 lệnh khuôn J, 2 lệnh \texttt{SPECIAL2} (\texttt{mul}, \texttt{bcd}) và 3 lệnh COP0, tổng 28. Bảng~\ref{tab:isa28} liệt kê từng lệnh.
+
+{\small
+\begin{longtable}{@{}r p{3.6cm} l p{6.1cm}@{}}
+\caption{28 lệnh của WatchChip: mã hóa và ý nghĩa.}\label{tab:isa28}\\
+\toprule
+\# & Lệnh & op / funct & Ý nghĩa \\
+\midrule
+\endfirsthead
+\toprule
+\# & Lệnh & op / funct & Ý nghĩa \\
+\midrule
+\endhead
+\bottomrule
+\endfoot
+1 & \texttt{addu rd,rs,rt} & 00/0x21 & \texttt{R[rd] = R[rs] + R[rt]} \\
+2 & \texttt{subu rd,rs,rt} & 00/0x23 & \texttt{R[rd] = R[rs] $-$ R[rt]} \\
+3 & \texttt{and rd,rs,rt} & 00/0x24 & \texttt{R[rd] = R[rs] \& R[rt]} \\
+4 & \texttt{or rd,rs,rt} & 00/0x25 & \texttt{R[rd] = R[rs] \textbar{} R[rt]} \\
+5 & \texttt{xor rd,rs,rt} & 00/0x26 & \texttt{R[rd] = R[rs] \^{} R[rt]} \\
+6 & \texttt{slt rd,rs,rt} & 00/0x2A & \texttt{R[rd] = s(R[rs]) < s(R[rt]) ? 1 : 0} \\
+7 & \texttt{sll rd,rt,sa} & 00/0x00 & \texttt{R[rd] = R[rt] {<}{<} sa} (\texttt{sll \$0,\$0,0} = \texttt{nop} = 0x00000000) \\
+8 & \texttt{sra rd,rt,sa} & 00/0x03 & \texttt{R[rd] = s(R[rt]) {>}{>} sa} (dịch số học, chép bit dấu) \\
+9 & \texttt{jr rs} & 00/0x08 & \texttt{PC = R[rs]} (2 bit thấp bị bỏ) \\
+10 & \texttt{div rs,rt} & 00/0x1A & Chia có dấu: \texttt{LO} = thương làm tròn về 0, \texttt{HI} = dư (cùng dấu với số bị chia). Chạy 33 chu kỳ CPU (một chu kỳ start, 32 bước chia). \\
+11 & \texttt{mfhi rd} & 00/0x10 & \texttt{R[rd] = HI} \\
+12 & \texttt{mflo rd} & 00/0x12 & \texttt{R[rd] = LO} \\
+13 & \texttt{addiu rt,rs,imm} & 0x09 & \texttt{R[rt] = R[rs] + SE(imm)} \\
+14 & \texttt{slti rt,rs,imm} & 0x0A & \texttt{R[rt] = s(R[rs]) < s(SE(imm)) ? 1 : 0} \\
+15 & \texttt{andi rt,rs,imm} & 0x0C & \texttt{R[rt] = R[rs] \& ZE(imm)} \\
+16 & \texttt{ori rt,rs,imm} & 0x0D & \texttt{R[rt] = R[rs] \textbar{} ZE(imm)} \\
+17 & \texttt{lui rt,imm} & 0x0F & \texttt{R[rt] = imm {<}{<} 16} \\
+18 & \texttt{lw rt,imm(rs)} & 0x23 & \texttt{R[rt] = M[(R[rs] + SE(imm)) \& \~{}3]} \\
+19 & \texttt{sw rt,imm(rs)} & 0x2B & \texttt{M[(R[rs] + SE(imm)) \& \~{}3] = R[rt]} \\
+20 & \texttt{beq rs,rt,L} & 0x04 & Nếu \texttt{R[rs] == R[rt]} thì \texttt{PC = PC + 4 + (SE(imm) {<}{<} 2)}. \\
+21 & \texttt{bne rs,rt,L} & 0x05 & Nếu \texttt{R[rs] != R[rt]} thì \texttt{PC = PC + 4 + (SE(imm) {<}{<} 2)}. \\
+22 & \texttt{j L} & 0x02 & Nhảy tới địa chỉ ghép từ \texttt{target} (xem trên). \\
+23 & \texttt{jal L} & 0x03 & \texttt{R[31] = PC + 4}, rồi nhảy như \texttt{j}. \\
+24 & \texttt{mul rd,rs,rt} & 0x1C/0x02 & \texttt{R[rd]} = 32 bit thấp của tích có dấu \texttt{s(R[rs])} $\times$ \texttt{s(R[rt])}. \texttt{HI}, \texttt{LO} không đổi. \\
+25 & \texttt{bcd rd,rs} & 0x1C/0x10 & Nếu \texttt{u(R[rs])} $\le$ 99\,999\,999 thì \texttt{R[rd]} gồm 8 chữ số thập phân, mỗi chữ số 4 bit, hàng đơn vị ở bit [3:0]; ngược lại \texttt{R[rd] = 0xFFFFFFFF}. \\
+26 & \texttt{mfc0 rt,rd} & 0x10/rs = 0x00 & \texttt{R[rt] = CP0[rd]} \\
+27 & \texttt{mtc0 rt,rd} & 0x10/rs = 0x04 & \texttt{CP0[rd] = R[rt]} (chỉ ghi các bit ghi được). \\
+28 & \texttt{eret} & 0x42000018 & \texttt{PC = EPC}, \texttt{Status.EXL = 0} \\
+\end{longtable}
+}
+
+\section{Cơ sở thiết kế}\label{sec:co-so-tk}
 \subsection{CPU đơn chu kỳ}
+CPU đơn chu kỳ làm xong một lệnh trong một chu kỳ: lấy lệnh, giải mã, đọc thanh ghi, tính, truy cập bộ nhớ, ghi kết quả. CPI (số chu kỳ trên một lệnh) bằng 1. Đổi lại, chu kỳ xung phải dài bằng đường đi chậm nhất, thường là của \texttt{lw}, nên mọi lệnh đều phải chờ theo nó. Thiết kế này dễ kiểm nhất và là cơ sở để so sánh. WatchChip hiện thực nó thành G1, với một sửa đổi cho bộ nhớ trong FPGA (mục~\ref{sec:g1}).
+
 \subsection{Kỹ thuật đường ống (pipelining)}
+Đường ống chia lệnh thành các tầng và cho nhiều lệnh chạy chồng nhau, mỗi lệnh ở một tầng khác nhau. Năm tầng cổ điển là IF (lấy lệnh), ID (giải mã, đọc thanh ghi), EX (tính), MEM (truy cập bộ nhớ) và WB (ghi thanh ghi). Giữa hai tầng có một thanh ghi tầng giữ kết quả dở dang. Khi đầy ống, mỗi chu kỳ xong một lệnh, và chu kỳ xung chỉ cần dài bằng tầng chậm nhất, ngắn hơn nhiều so với đơn chu kỳ. WatchChip hiện thực nó thành G2.
+
 \subsection{Các loại xung đột và kỹ thuật xử lý}
-\subsection{Ngắt và CP0}
-\TODO{Chương 1 là chỗ DUY NHẤT được dùng hình từ sách; mỗi hình ghi ``nguồn: P\&H Fig x.y''.}
+Xung đột (hazard) là tình huống lệnh kế tiếp không thể chạy ngay ở chu kỳ kế. Có ba loại:
+\begin{itemize}
+  \item \textbf{Xung đột cấu trúc}: hai lệnh cần cùng một tài nguyên phần cứng trong cùng chu kỳ, ví dụ cùng đọc một bộ nhớ để lấy lệnh và để lấy dữ liệu. Tách IMEM và DMEM (kiểu Harvard) loại bỏ trường hợp này.
+  \item \textbf{Xung đột dữ liệu}: lệnh sau cần kết quả lệnh trước chưa kịp ghi (RAW, đọc sau ghi). Kỹ thuật xử lý là \emph{forwarding}: đưa kết quả thẳng từ đầu ra một tầng về đầu vào ALU, không đợi ghi vào thanh ghi. Riêng \texttt{lw} có dữ liệu muộn hơn: lệnh dùng ngay kết quả của nó phải \emph{đứng} (stall) một chu kỳ. Đó là xung đột load-use.
+  \item \textbf{Xung đột điều khiển}: chưa biết nhánh có nhảy hay không thì chưa biết lệnh kế là lệnh nào. Cách đơn giản nhất là dự đoán không nhảy; nếu đoán sai thì hủy (flush) các lệnh đã lấy nhầm.
+\end{itemize}
+Chương~\ref{chap:thiet-ke} nói từng loại được xử lý thế nào trong G2.
+
+\subsection{Ngắt và CP0}\label{sec:ngat-lt}
+Ngắt cho ngoại vi (ở đây là nút bấm, UART) chen vào chương trình đang chạy mà không cần CPU hỏi liên tục. Khi nhận ngắt, CPU lưu địa chỉ lệnh cần quay về vào \texttt{EPC}, bật cờ \texttt{EXL} để chặn ngắt lồng, rồi nhảy tới địa chỉ cố định \texttt{0x180}. Trình xử lý kết thúc bằng \texttt{eret}: PC lấy lại từ \texttt{EPC} và \texttt{EXL} xóa về 0. Các thanh ghi \texttt{Status}, \texttt{Cause}, \texttt{EPC} nằm trong CP0 và đọc, ghi bằng \texttt{mfc0}, \texttt{mtc0}. Ngắt \emph{chính xác} nghĩa là lệnh nào đã qua một điểm nhất định thì chạy trọn, lệnh chưa qua thì bị hủy và chạy lại sau \texttt{eret}; điều này quan trọng với đường ống, nơi nhiều lệnh dở dang cùng lúc.
+
+\TODO{Long. Chèn tối đa 3 hình từ sách Patterson \& Hennessy cho mục 1.3 (đường dữ liệu đơn chu kỳ, đường ống 5 tầng, forwarding), mỗi hình ghi ``nguồn: P\&H Fig x.y''. Báo cáo chỉ được dùng hình sách ở chương 1.}
